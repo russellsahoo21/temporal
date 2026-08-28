@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporal Sales Database</title>
+    <!-- Modern Minimal Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header class="app-header">
+        <div class="brand">
+            <h1>Temporal Sales Database</h1>
+        </div>
+
+        <div class="header-actions">
+            <div class="db-badge" id="dbStatusBadge">
+                <span class="dot online"></span>
+                <span>Database: Connected</span>
+            </div>
+            <button class="btn btn-primary" onclick="openNewSaleModal()">+ Add New Sale</button>
+        </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('crud-tab')">Sales CRUD Operations</button>
+        <button class="tab-btn" onclick="switchTab('analytics-tab')">Multidimensional Analytics</button>
+        <button class="tab-btn" onclick="switchTab('temporal-tab')">Temporal Time-Travel</button>
+        <button class="tab-btn" onclick="switchTab('dbviewer-tab')">Database Table Explorer</button>
+        <button class="tab-btn" onclick="switchTab('supabase-tab')">Supabase Config</button>
+    </nav>
+
+    <!-- App Main Container -->
+    <main class="container">
+
+        <!-- ================= TAB 1: SALES CRUD ================= -->
+        <section id="crud-tab" class="tab-content active">
+            <div class="section-toolbar">
+                <div class="search-box">
+                    <input type="text" id="salesSearchInput" placeholder="Search by customer, product, category, or region..." oninput="filterSalesTable()">
+                </div>
+                <div class="toolbar-stats" id="totalRecordsCount">Total Records: 0</div>
+                <button class="btn btn-secondary btn-sm" onclick="loadAllSales()">Refresh</button>
+            </div>
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="data-table" id="salesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Product Dimension</th>
+                                <th>Store / Region</th>
+                                <th>Time Dimension</th>
+                                <th>Qty</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                                <th>Valid From</th>
+                                <th>Valid To</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTableBody">
+                            <tr><td colspan="12" class="text-center py-4">Loading sales data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: MULTIDIMENSIONAL ANALYTICS ================= -->
+        <section id="analytics-tab" class="tab-content">
+            <div class="metrics-grid" id="metricsSummary">
+                <div class="metric-card">
+                    <div class="metric-title">Total Revenue</div>
+                    <div class="metric-value" id="metricTotalRevenue">$0.00</div>
+                    <div class="metric-sub">Aggregated across all sales facts</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Units Sold</div>
+                    <div class="metric-value" id="metricTotalUnits">0</div>
+                    <div class="metric-sub">Product quantity volume</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Fact Transactions</div>
+                    <div class="metric-value" id="metricTotalTransactions">0</div>
+                    <div class="metric-sub">Recorded sales fact entries</div>
+                </div>
+            </div>
+
+            <div class="dimension-grid">
+                <!-- Product Dimension Breakdown -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Product Dimension Slicing (By Category)</h3>
+                    </div>
+                    <div class="card-body" id="categoryBreakdownContainer">
+                        <p>Loading category stats...</p>
+                    </div>
+                </div>
+
+                <!-- Store Dimension Breakdown -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Store Dimension Slicing (By Region)</h3>
+                    </div>
+                    <div class="card-body" id="regionBreakdownContainer">
+                        <p>Loading region stats...</p>
+                    </div>
+                </div>
+
+                <!-- Time Dimension Breakdown (Quarterly) -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Time Dimension Slicing (By Year & Quarter)</h3>
+                    </div>
+                    <div class="card-body" id="timeQuarterBreakdownContainer">
+                        <p>Loading time quarter stats...</p>
+                    </div>
+                </div>
+
+                <!-- Time Dimension Breakdown (Monthly) -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Time Dimension Trend (By Month)</h3>
+                    </div>
+                    <div class="card-body" id="monthBreakdownContainer">
+                        <p>Loading month stats...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: TEMPORAL & TIME TRAVEL ================= -->
+        <section id="temporal-tab" class="tab-content">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Temporal Point-in-Time Query ("As Of" Date)</h3>
+                    <p class="card-desc">Query sales valid at a specific snapshot in time (historical state reconstruction)</p>
+                </div>
+                <div class="card-body">
+                    <div class="temporal-filter-bar">
+                        <div class="form-group mb-0">
+                            <label for="asOfDateInput">Target Snapshot Date:</label>
+                            <input type="date" id="asOfDateInput" value="2025-06-01">
+                        </div>
+                        <button class="btn btn-primary" onclick="querySalesAsOf()">Run Snapshot Query</button>
+                        <button class="btn btn-secondary" onclick="resetToCurrentTime()">Now (Present)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-header-flex">
+                    <h4 id="temporalQueryTitle">Active Sales as of Selected Snapshot</h4>
+                    <span class="badge badge-info" id="temporalCountBadge">0 Records</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Region</th>
+                                <th>Amount</th>
+                                <th>Valid From</th>
+                                <th>Valid To</th>
+                                <th>System Tx Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="temporalTableBody">
+                            <tr><td colspan="9" class="text-center py-4">Click "Run Snapshot Query" to inspect temporal state.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: DATABASE VIEWER ================= -->
+        <section id="dbviewer-tab" class="tab-content">
+            <div class="db-viewer-header">
+                <div class="table-selector-group">
+                    <label>Select Table to Inspect:</label>
+                    <div class="table-tabs" id="tableSelectorButtons">
+                        <button class="table-tab-btn active" onclick="loadDbTable('fact_sales')">fact_sales (Fact Table)</button>
+                        <button class="table-tab-btn" onclick="loadDbTable('dim_time')">dim_time (Dimension)</button>
+                        <button class="table-tab-btn" onclick="loadDbTable('dim_product')">dim_product (Dimension)</button>
+                        <button class="table-tab-btn" onclick="loadDbTable('dim_store')">dim_store (Dimension)</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="reloadCurrentDbTable()">Refresh Table</button>
+            </div>
+
+            <div class="table-card mt-3">
+                <div class="table-header-flex">
+                    <h4 id="currentTableName">Table: fact_sales</h4>
+                    <span class="badge badge-secondary" id="tableRowCountBadge">0 Rows</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="rawDbTable">
+                        <thead id="rawDbTableHead"></thead>
+                        <tbody id="rawDbTableBody">
+                            <tr><td class="text-center py-4">Loading table data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: SUPABASE CONFIGURATION ================= -->
+        <section id="supabase-tab" class="tab-content">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Supabase Database Connection Guide</h3>
+                </div>
+                <div class="card-body supabase-guide">
+                    <p>This Spring Boot project is pre-configured with the official PostgreSQL driver for <strong>Supabase</strong>. By default, it runs with an in-memory H2 database so you can test immediately. When you are ready to connect to your Supabase project, follow these 3 simple steps:</p>
+
+                    <div class="step-box">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Copy Connection Details from Supabase</h4>
+                            <p>Go to your <a href="https://supabase.com/dashboard" target="_blank" class="link">Supabase Dashboard</a> &rarr; Select your Project &rarr; <strong>Project Settings</strong> &rarr; <strong>Database</strong> &rarr; scroll to <strong>Connection string (URI or JDBC)</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div class="step-box">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Update <code>application.properties</code></h4>
+                            <p>Open <code>src/main/resources/application.properties</code> in this project and configure:</p>
+                            <pre class="code-block"><code>spring.datasource.url=jdbc:postgresql://aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+spring.datasource.username=postgres.YOUR_PROJECT_REF
+spring.datasource.password=YOUR_DATABASE_PASSWORD
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="step-box">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Run Spring Boot Application</h4>
+                            <p>Hibernate will automatically create the tables (<code>dim_time</code>, <code>dim_product</code>, <code>dim_store</code>, <code>fact_sales</code>) and seed the initial data in your Supabase database!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= MODAL: CREATE / EDIT SALE ================= -->
+    <div class="modal-overlay" id="saleModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Sale</h3>
+                <button class="close-btn" onclick="closeSaleModal()">&times;</button>
+            </div>
+            <form id="saleForm" onsubmit="handleSaleFormSubmit(event)">
+                <input type="hidden" id="formSaleId">
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="formCustomerName">Customer / Client Name *</label>
+                        <input type="text" id="formCustomerName" required placeholder="e.g. Acme Corporation or John Doe">
+                    </div>
+
+                    <!-- Product Dimension Input -->
+                    <div class="form-group">
+                        <label for="formProductName">Product Name *</label>
+                        <input type="text" id="formProductName" required placeholder="e.g. MacBook Pro M3" list="productSuggestions">
+                        <datalist id="productSuggestions"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formProductCategory">Product Category</label>
+                        <select id="formProductCategory">
+                            <option value="Electronics">Electronics</option>
+                            <option value="Fashion & Apparel">Fashion & Apparel</option>
+                            <option value="Home & Living">Home & Living</option>
+                            <option value="Sports & Outdoors">Sports & Outdoors</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formProductBrand">Product Brand</label>
+                        <input type="text" id="formProductBrand" placeholder="e.g. Apple, Sony, Nike">
+                    </div>
+
+                    <!-- Store / Region Dimension -->
+                    <div class="form-group">
+                        <label for="formStoreName">Store Name</label>
+                        <input type="text" id="formStoreName" placeholder="e.g. Manhattan 5th Ave" list="storeSuggestions">
+                        <datalist id="storeSuggestions"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formRegion">Region</label>
+                        <select id="formRegion">
+                            <option value="East">East</option>
+                            <option value="West">West</option>
+                            <option value="North">North</option>
+                            <option value="South">South</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formCity">City</label>
+                        <input type="text" id="formCity" placeholder="e.g. New York">
+                    </div>
+
+                    <!-- Financial Measures -->
+                    <div class="form-group">
+                        <label for="formUnitPrice">Unit Price ($) *</label>
+                        <input type="number" step="0.01" min="0" id="formUnitPrice" required value="100.00" oninput="calculateFormTotal()">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formQuantity">Quantity *</label>
+                        <input type="number" min="1" id="formQuantity" required value="1" oninput="calculateFormTotal()">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formDiscount">Discount ($)</label>
+                        <input type="number" step="0.01" min="0" id="formDiscount" value="0.00" oninput="calculateFormTotal()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Calculated Total Amount</label>
+                        <div class="form-calculated-val" id="formCalculatedTotal">$100.00</div>
+                    </div>
+
+                    <!-- Temporal Attributes -->
+                    <div class="form-group">
+                        <label for="formSaleDate">Sale Date (Time Dimension)</label>
+                        <input type="date" id="formSaleDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formValidFrom">Temporal Valid From</label>
+                        <input type="datetime-local" id="formValidFrom">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formValidTo">Temporal Valid To (Optional)</label>
+                        <input type="datetime-local" id="formValidTo">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formStatus">Record Status</label>
+                        <select id="formStatus">
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="REVISED">REVISED</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeSaleModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveSaleBtn">Save Sale Fact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
