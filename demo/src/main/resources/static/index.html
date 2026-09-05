@@ -31,6 +31,7 @@
     <nav class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('crud-tab')">Sales CRUD Operations</button>
         <button class="tab-btn" onclick="switchTab('analytics-tab')">Multidimensional Analytics</button>
+        <button class="tab-btn" onclick="switchTab('cube-tab')">OLAP Cube Explorer</button>
         <button class="tab-btn" onclick="switchTab('temporal-tab')">Temporal Time-Travel</button>
         <button class="tab-btn" onclick="switchTab('dbviewer-tab')">Database Table Explorer</button>
         <button class="tab-btn" onclick="switchTab('supabase-tab')">Supabase Config</button>
@@ -135,6 +136,124 @@
                     <div class="card-body" id="monthBreakdownContainer">
                         <p>Loading month stats...</p>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB: OLAP DATA CUBE EXPLORER ================= -->
+        <section id="cube-tab" class="tab-content">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="flex-between">
+                        <div>
+                            <h3>OLAP Multidimensional Data Cube</h3>
+                            <p class="card-desc">Interactive 3-Axis Analysis (Product &times; Region &times; Time) Demonstrating the 5 Core OLAP Operations</p>
+                        </div>
+                        <div class="cube-badge-group">
+                            <span class="badge badge-info">Axis X: Product</span>
+                            <span class="badge badge-info">Axis Y: Region</span>
+                            <span class="badge badge-info">Axis Z: Time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Quick Presets for Teacher Demo -->
+                    <div class="preset-bar mb-3">
+                        <span class="preset-label">Teacher Demonstration Presets:</span>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('standard')">Standard 3D Cube</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('slice')">Slice (Time = 2025)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('dice')">Dice (Electronics & Fashion in East & West)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('pivot')">Pivot (Rotate: Region &times; Category)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('drilldown')">Drill-Down (Quarter &rarr; Month)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('rollup')">Roll-Up (Quarter &rarr; Year)</button>
+                    </div>
+
+                    <!-- Interactive Cube Controls -->
+                    <div class="cube-controls-grid">
+                        <div class="form-group">
+                            <label for="cubeRowDimSelect">Row Axis (Dimension)</label>
+                            <select id="cubeRowDimSelect" onchange="applyCubeQuery()">
+                                <option value="productCategory" selected>Product Category</option>
+                                <option value="region">Geography / Region</option>
+                                <option value="timePeriod">Time Period</option>
+                                <option value="productBrand">Product Brand</option>
+                                <option value="storeName">Store Name</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cubeColDimSelect">Column Axis (Dimension)</label>
+                            <select id="cubeColDimSelect" onchange="applyCubeQuery()">
+                                <option value="timePeriod" selected>Time Period</option>
+                                <option value="region">Geography / Region</option>
+                                <option value="productCategory">Product Category</option>
+                                <option value="storeName">Store Name</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cubeMeasureSelect">Cube Measure (Cell Metric)</label>
+                            <select id="cubeMeasureSelect" onchange="applyCubeQuery()">
+                                <option value="REVENUE" selected>Total Sales Revenue ($)</option>
+                                <option value="QUANTITY">Total Units Sold</option>
+                                <option value="COUNT">Transaction Count</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Time Hierarchy (Roll-up / Drill-down)</label>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline btn-sm time-hier-btn" id="hierYearBtn" onclick="setTimeHierarchy('YEAR')">Year (Roll-up)</button>
+                                <button type="button" class="btn btn-outline btn-sm time-hier-btn active" id="hierQuarterBtn" onclick="setTimeHierarchy('QUARTER')">Quarter</button>
+                                <button type="button" class="btn btn-outline btn-sm time-hier-btn" id="hierMonthBtn" onclick="setTimeHierarchy('MONTH')">Month (Drill-down)</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cubeSliceDimSelect">Slice Dimension (Fixed Cut)</label>
+                            <select id="cubeSliceDimSelect" onchange="onSliceDimChanged()">
+                                <option value="">None (Full Cube)</option>
+                                <option value="timeYear">Time (Year)</option>
+                                <option value="region">Geography (Region)</option>
+                                <option value="productCategory">Product (Category)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cubeSliceValSelect">Slice Value</label>
+                            <select id="cubeSliceValSelect" onchange="applyCubeQuery()" disabled>
+                                <option value="">Select dimension first</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="cube-action-row mt-3">
+                        <button class="btn btn-outline btn-sm" onclick="pivotCubeAxes()">Rotate Axes (Pivot)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="resetCubeFilters()">Reset to Default Cube</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Operation Status Banner -->
+            <div class="operation-info-card mb-3" id="cubeOperationBanner">
+                <div class="operation-title" id="cubeOpTitle">Full Multidimensional Cube View</div>
+                <div class="operation-desc" id="cubeOpDesc">Displaying aggregated fact measures across Product, Time, and Region dimensions.</div>
+            </div>
+
+            <!-- The Cube Matrix (Pivot Grid) Table -->
+            <div class="table-card">
+                <div class="table-header-flex">
+                    <h4 id="cubeTableTitle">Cube Matrix</h4>
+                    <span class="badge badge-secondary" id="cubeCellCountBadge">0 Cells</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table cube-table" id="cubeMatrixTable">
+                        <thead id="cubeMatrixHead"></thead>
+                        <tbody id="cubeMatrixBody">
+                            <tr><td class="text-center py-4">Loading OLAP Data Cube...</td></tr>
+                        </tbody>
+                        <tfoot id="cubeMatrixFoot"></tfoot>
+                    </table>
                 </div>
             </div>
         </section>

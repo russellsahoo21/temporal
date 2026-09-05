@@ -38,6 +38,8 @@ function switchTab(tabId) {
         loadAnalytics();
     } else if (tabId === 'crud-tab') {
         loadAllSales();
+    } else if (tabId === 'cube-tab') {
+        initCubeTab();
     } else if (tabId === 'dbviewer-tab') {
         loadDbTable(currentDbTable);
     }
@@ -529,3 +531,280 @@ function showToast(msg, type = 'info') {
         toast.classList.remove('show');
     }, 3000);
 }
+
+// ================= OLAP Data Cube Explorer =================
+let cubeMetadata = null;
+let currentCubeHierarchy = 'QUARTER';
+let activeDiceParams = null;
+
+async function initCubeTab() {
+    if (!cubeMetadata) {
+        await loadCubeMetadata();
+    }
+    applyCubeQuery();
+}
+
+async function loadCubeMetadata() {
+    try {
+        const res = await fetch(`${API_BASE}/cube/metadata`);
+        if (!res.ok) return;
+        cubeMetadata = await res.json();
+    } catch (err) {
+        console.error('Error fetching cube metadata:', err);
+    }
+}
+
+function onSliceDimChanged() {
+    const dimSelect = document.getElementById('cubeSliceDimSelect');
+    const valSelect = document.getElementById('cubeSliceValSelect');
+    const selectedDim = dimSelect.value;
+
+    valSelect.innerHTML = '';
+
+    if (!selectedDim) {
+        valSelect.disabled = true;
+        valSelect.innerHTML = '<option value="">Select dimension first</option>';
+        applyCubeQuery();
+        return;
+    }
+
+    valSelect.disabled = false;
+    valSelect.innerHTML = '<option value="">-- Choose Value to Slice --</option>';
+
+    if (selectedDim === 'timeYear' && cubeMetadata?.years) {
+        cubeMetadata.years.forEach(y => {
+            valSelect.innerHTML += `<option value="${y}">Year ${y}</option>`;
+        });
+    } else if (selectedDim === 'region' && cubeMetadata?.regions) {
+        cubeMetadata.regions.forEach(r => {
+            valSelect.innerHTML += `<option value="${escapeHtml(r)}">${escapeHtml(r)} Region</option>`;
+        });
+    } else if (selectedDim === 'productCategory' && cubeMetadata?.categories) {
+        cubeMetadata.categories.forEach(c => {
+            valSelect.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+        });
+    }
+
+    // Default to the first available value
+    if (valSelect.options.length > 1) {
+        valSelect.selectedIndex = 1;
+    }
+    applyCubeQuery();
+}
+
+function setTimeHierarchy(level) {
+    currentCubeHierarchy = level;
+    document.querySelectorAll('.time-hier-btn').forEach(btn => btn.classList.remove('active'));
+
+    if (level === 'YEAR') {
+        document.getElementById('hierYearBtn')?.classList.add('active');
+    } else if (level === 'QUARTER') {
+        document.getElementById('hierQuarterBtn')?.classList.add('active');
+    } else if (level === 'MONTH') {
+        document.getElementById('hierMonthBtn')?.classList.add('active');
+    }
+
+    applyCubeQuery();
+}
+
+function pivotCubeAxes() {
+    const rowSelect = document.getElementById('cubeRowDimSelect');
+    const colSelect = document.getElementById('cubeColDimSelect');
+    const temp = rowSelect.value;
+    rowSelect.value = colSelect.value;
+    colSelect.value = temp;
+
+    activeDiceParams = null;
+    applyCubeQuery();
+}
+
+function resetCubeFilters() {
+    document.getElementById('cubeRowDimSelect').value = 'productCategory';
+    document.getElementById('cubeColDimSelect').value = 'timePeriod';
+    document.getElementById('cubeMeasureSelect').value = 'REVENUE';
+    document.getElementById('cubeSliceDimSelect').value = '';
+    
+    const sliceValSelect = document.getElementById('cubeSliceValSelect');
+    sliceValSelect.innerHTML = '<option value="">Select dimension first</option>';
+    sliceValSelect.disabled = true;
+
+    setTimeHierarchy('QUARTER');
+    activeDiceParams = null;
+    applyCubeQuery();
+}
+
+function runCubePreset(preset) {
+    activeDiceParams = null;
+    const rowSelect = document.getElementById('cubeRowDimSelect');
+    const colSelect = document.getElementById('cubeColDimSelect');
+    const sliceDim = document.getElementById('cubeSliceDimSelect');
+    const sliceVal = document.getElementById('cubeSliceValSelect');
+
+    if (preset === 'standard') {
+        resetCubeFilters();
+        return;
+    }
+
+    if (preset === 'slice') {
+        rowSelect.value = 'productCategory';
+        colSelect.value = 'region';
+        sliceDim.value = 'timeYear';
+        onSliceDimChanged();
+        sliceVal.value = '2025';
+        applyCubeQuery();
+        return;
+    }
+
+    if (preset === 'dice') {
+        rowSelect.value = 'productCategory';
+        colSelect.value = 'region';
+        sliceDim.value = '';
+        sliceVal.disabled = true;
+        activeDiceParams = {
+            diceCategories: ['Electronics', 'Fashion & Apparel'],
+            diceRegions: ['East', 'West']
+        };
+        applyCubeQuery();
+        return;
+    }
+
+    if (preset === 'pivot') {
+        rowSelect.value = 'region';
+        colSelect.value = 'productCategory';
+        sliceDim.value = '';
+        sliceVal.disabled = true;
+        applyCubeQuery();
+        return;
+    }
+
+    if (preset === 'drilldown') {
+        rowSelect.value = 'productCategory';
+        colSelect.value = 'timePeriod';
+        setTimeHierarchy('MONTH');
+        return;
+    }
+
+    if (preset === 'rollup') {
+        rowSelect.value = 'productCategory';
+        colSelect.value = 'timePeriod';
+        setTimeHierarchy('YEAR');
+        return;
+    }
+}
+
+async function applyCubeQuery() {
+    const rowDim = document.getElementById('cubeRowDimSelect').value;
+    const colDim = document.getElementById('cubeColDimSelect');
+    const measure = document.getElementById('cubeMeasureSelect').value;
+    const sliceDim = document.getElementById('cubeSliceDimSelect').value;
+    const sliceVal = document.getElementById('cubeSliceValSelect').value;
+
+    const payload = {
+        rowDimension: rowDim,
+        colDimension: colDim ? colDim.value : 'timePeriod',
+        timeHierarchy: currentCubeHierarchy,
+        measure: measure,
+        sliceDimension: sliceDim || null,
+        sliceValue: sliceVal || null
+    };
+
+    if (activeDiceParams) {
+        if (activeDiceParams.diceCategories) payload.diceCategories = activeDiceParams.diceCategories;
+        if (activeDiceParams.diceRegions) payload.diceRegions = activeDiceParams.diceRegions;
+        if (activeDiceParams.diceYears) payload.diceYears = activeDiceParams.diceYears;
+    }
+
+    const tableBody = document.getElementById('cubeMatrixBody');
+    tableBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Computing multidimensional cube matrix...</td></tr>';
+
+    try {
+        const res = await fetch(`${API_BASE}/cube/query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Cube aggregation query failed');
+        const data = await res.json();
+        renderCubeMatrix(data);
+    } catch (err) {
+        tableBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">Error: ${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+function renderCubeMatrix(data) {
+    // 1. Update Operation Banner
+    const opTitle = document.getElementById('cubeOpTitle');
+    const opDesc = document.getElementById('cubeOpDesc');
+    if (opTitle) opTitle.innerText = `Operation: ${data.operationTitle || 'Multidimensional View'}`;
+    if (opDesc) opDesc.innerText = data.operationExplanation || '';
+
+    // 2. Table Headers
+    const thead = document.getElementById('cubeMatrixHead');
+    const tbody = document.getElementById('cubeMatrixBody');
+    const tfoot = document.getElementById('cubeMatrixFoot');
+    const countBadge = document.getElementById('cubeCellCountBadge');
+
+    const totalCells = (data.rowHeaders?.length || 0) * (data.colHeaders?.length || 0);
+    if (countBadge) countBadge.innerText = `${totalCells} Matrix Cells (${data.rowHeaders?.length || 0} x ${data.colHeaders?.length || 0})`;
+
+    const formatVal = (num) => {
+        if (num === null || num === undefined) return '-';
+        if (data.measure === 'REVENUE') {
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        return num.toLocaleString('en-US');
+    };
+
+    // Header Row
+    const rowDimLabel = getDimensionLabel(data.rowDimension);
+    const colDimLabel = getDimensionLabel(data.colDimension);
+
+    let headHtml = `<tr><th class="axis-corner">${escapeHtml(rowDimLabel)} &darr; &bull; ${escapeHtml(colDimLabel)} &rarr;</th>`;
+    (data.colHeaders || []).forEach(col => {
+        headHtml += `<th class="text-right">${escapeHtml(col)}</th>`;
+    });
+    headHtml += `<th class="text-right" style="background-color: #1a2e3b; color: #34d399;">Row Total</th></tr>`;
+    thead.innerHTML = headHtml;
+
+    // Body Rows
+    if (!data.rowHeaders || data.rowHeaders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${(data.colHeaders?.length || 0) + 2}" class="text-center py-4">No records found for this slice/dice configuration.</td></tr>`;
+        tfoot.innerHTML = '';
+        return;
+    }
+
+    let bodyHtml = '';
+    data.rowHeaders.forEach((rowName, rIdx) => {
+        bodyHtml += `<tr><td><strong>${escapeHtml(rowName)}</strong></td>`;
+        (data.colHeaders || []).forEach((_, cIdx) => {
+            const val = data.matrix[rIdx][cIdx];
+            const activeClass = val > 0 ? 'active-val' : '';
+            bodyHtml += `<td class="cube-cell ${activeClass}">${formatVal(val)}</td>`;
+        });
+        // Row Total
+        bodyHtml += `<td class="cube-total-cell">${formatVal(data.rowTotals[rIdx])}</td></tr>`;
+    });
+    tbody.innerHTML = bodyHtml;
+
+    // Footer (Column Totals & Grand Total)
+    let footHtml = `<tr><th>Column Total</th>`;
+    (data.colTotals || []).forEach(colTot => {
+        footHtml += `<td class="cube-total-cell">${formatVal(colTot)}</td>`;
+    });
+    footHtml += `<td class="cube-grand-total">${formatVal(data.grandTotal)}</td></tr>`;
+    tfoot.innerHTML = footHtml;
+}
+
+function getDimensionLabel(dimKey) {
+    if (!dimKey) return 'Dimension';
+    switch (dimKey.toLowerCase()) {
+        case 'productcategory': return 'Product Category';
+        case 'region': return 'Region';
+        case 'timeperiod': return 'Time Period';
+        case 'productbrand': return 'Product Brand';
+        case 'storeName': return 'Store Name';
+        default: return dimKey;
+    }
+}
+
