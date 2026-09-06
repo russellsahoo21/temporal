@@ -165,6 +165,31 @@
                         <button class="btn btn-secondary btn-sm" onclick="runCubePreset('rollup')">Roll-Up (Quarter &rarr; Year)</button>
                     </div>
 
+                    <!-- 3D Interactive Visual Data Cube -->
+                    <div class="cube-3d-visual-container mb-3">
+                        <div class="cube-3d-top-bar">
+                            <div>
+                                <span class="cube-3d-badge">3D Model</span>
+                                <strong>Interactive 3-Axis Data Cube</strong>
+                                <span class="text-secondary" style="font-size: 0.8rem; margin-left: 8px;">(Drag with mouse to rotate &bull; Hover on cells to inspect)</span>
+                            </div>
+                            <div class="cube-view-controls">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="resetCube3dRotation()">Reset View</button>
+                                <button type="button" class="btn btn-outline btn-sm" id="cubeSpinToggleBtn" onclick="toggleCubeAutoSpin()">Pause Spin</button>
+                            </div>
+                        </div>
+                        <div class="cube-canvas-wrapper">
+                            <canvas id="cube3dCanvas" width="850" height="380"></canvas>
+                            <div id="cube3dTooltip" class="cube-3d-tooltip"></div>
+                        </div>
+                        <div class="cube-3d-legend">
+                            <div class="legend-item"><span class="legend-box" style="background:#38bdf8;"></span> <span id="cubeAxisXLegend"><strong>X-Axis:</strong> Product Category</span></div>
+                            <div class="legend-item"><span class="legend-box" style="background:#818cf8;"></span> <span id="cubeAxisYLegend"><strong>Y-Axis (Depth):</strong> Region</span></div>
+                            <div class="legend-item"><span class="legend-box" style="background:#34d399;"></span> <span id="cubeAxisZLegend"><strong>Z-Axis (Vertical):</strong> Time Quarter</span></div>
+                            <div class="legend-item"><span class="legend-box" style="background:#f59e0b;"></span> <span><strong>Active Selection:</strong> Slice / Dice</span></div>
+                        </div>
+                    </div>
+
                     <!-- Interactive Cube Controls -->
                     <div class="cube-controls-grid">
                         <div class="form-group">

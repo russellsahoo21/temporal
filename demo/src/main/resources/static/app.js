@@ -808,3 +808,418 @@ function getDimensionLabel(dimKey) {
     }
 }
 
+// ================= 3D Physical Data Cube Engine =================
+let cubeCanvas = null;
+let cubeCtx = null;
+let cubeRotX = -0.45;
+let cubeRotY = 0.70;
+let isDraggingCube = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+let cubeAutoSpin = true;
+let cubeAnimFrame = null;
+let hoveredVoxel = null;
+
+// The 3 Real Data Dimensions defining the Physical Cube coordinates
+const CUBE_DIM_X = ['Electronics', 'Fashion & Apparel', 'Home & Living', 'Sports & Outdoors']; // Product
+const CUBE_DIM_Y = ['East', 'West', 'North', 'South'];                                        // Region
+const CUBE_DIM_Z = ['2025 Q1', '2025 Q2', '2025 Q3', '2025 Q4'];                              // Time
+
+// Known realistic cell weights for lighting up cells
+const CUBE_CELL_DATA = {
+    '0,0,0': { val: 4399.97, qty: 5 }, // Electronics, East, Q1
+    '0,1,0': { val: 538.00,  qty: 2 }, // Electronics, West, Q1
+    '0,2,1': { val: 2548.00, qty: 3 }, // Electronics, North, Q2
+    '0,0,4': { val: 3228.98, qty: 4 }, // Electronics, East, 2026 Q1
+    '1,3,0': { val: 690.00,  qty: 1 }, // Fashion, South, Q1
+    '1,2,3': { val: 432.50,  qty: 2 }, // Fashion, North, Q4
+    '2,0,0': { val: 2400.00, qty: 4 }, // Home, East, Q1
+    '2,0,3': { val: 860.00,  qty: 2 }, // Home, East, Q4
+    '2,1,2': { val: 1299.00, qty: 1 }, // Home, West, Q3
+    '3,1,3': { val: 1875.00, qty: 3 }, // Sports, West, Q4
+};
+
+function init3dCube() {
+    cubeCanvas = document.getElementById('cube3dCanvas');
+    if (!cubeCanvas) return;
+    cubeCtx = cubeCanvas.getContext('2d');
+
+    // Attach mouse event listeners for rotation & inspection
+    cubeCanvas.addEventListener('mousedown', (e) => {
+        isDraggingCube = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        cubeAutoSpin = false;
+        updateSpinButtonState();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingCube) {
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            cubeRotY += dx * 0.008;
+            cubeRotX += dy * 0.008;
+            cubeRotX = Math.max(-1.4, Math.min(1.4, cubeRotX));
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        } else if (cubeCanvas) {
+            const rect = cubeCanvas.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                const canvasX = (e.clientX - rect.left) * (cubeCanvas.width / rect.width);
+                const canvasY = (e.clientY - rect.top) * (cubeCanvas.height / rect.height);
+                checkVoxelHover(canvasX, canvasY, e.clientX, e.clientY);
+            } else {
+                hideCubeTooltip();
+            }
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDraggingCube = false;
+    });
+
+    startCubeAnimation();
+}
+
+function updateSpinButtonState() {
+    const btn = document.getElementById('cubeSpinToggleBtn');
+    if (btn) btn.innerText = cubeAutoSpin ? 'Pause Spin' : 'Resume Spin';
+}
+
+function toggleCubeAutoSpin() {
+    cubeAutoSpin = !cubeAutoSpin;
+    updateSpinButtonState();
+}
+
+function resetCube3dRotation() {
+    cubeRotX = -0.45;
+    cubeRotY = 0.70;
+    cubeAutoSpin = false;
+    updateSpinButtonState();
+}
+
+function startCubeAnimation() {
+    if (cubeAnimFrame) cancelAnimationFrame(cubeAnimFrame);
+
+    function loop() {
+        if (cubeAutoSpin) {
+            cubeRotY += 0.005;
+        }
+        render3dCube();
+        cubeAnimFrame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function render3dCube() {
+    if (!cubeCtx || !cubeCanvas) return;
+    const w = cubeCanvas.width;
+    const h = cubeCanvas.height;
+    cubeCtx.clearRect(0, 0, w, h);
+
+    const centerX = w / 2;
+    const centerY = h / 2 + 10;
+    const boxSize = 28;
+    const spacing = 46;
+
+    const sliceDim = document.getElementById('cubeSliceDimSelect')?.value || '';
+    const sliceVal = document.getElementById('cubeSliceValSelect')?.value || '';
+
+    // Check if Dice is active
+    const isDice = !!(activeDiceParams && (activeDiceParams.diceCategories || activeDiceParams.diceRegions));
+
+    // Project and collect all voxels
+    const voxels = [];
+    const nx = CUBE_DIM_X.length;
+    const ny = CUBE_DIM_Y.length;
+    const nz = CUBE_DIM_Z.length;
+
+    for (let ix = 0; ix < nx; ix++) {
+        for (let iy = 0; iy < ny; iy++) {
+            for (let iz = 0; iz < nz; iz++) {
+                // Determine slice / dice membership
+                let isHighlighted = false;
+                let isDimmed = false;
+                let offsetX = 0, offsetY = 0, offsetZ = 0;
+
+                const prodCat = CUBE_DIM_X[ix];
+                const region = CUBE_DIM_Y[iy];
+                const timeQ = CUBE_DIM_Z[iz];
+
+                if (sliceDim === 'timeYear' && sliceVal === '2025') {
+                    if (timeQ.includes('2025')) {
+                        isHighlighted = true;
+                        offsetZ = -14; // Explode slice outward visually!
+                    } else {
+                        isDimmed = true;
+                    }
+                } else if (sliceDim === 'region' && sliceVal) {
+                    if (region.toLowerCase() === sliceVal.toLowerCase()) {
+                        isHighlighted = true;
+                        offsetY = -14;
+                    } else {
+                        isDimmed = true;
+                    }
+                } else if (sliceDim === 'productCategory' && sliceVal) {
+                    if (prodCat.toLowerCase() === sliceVal.toLowerCase()) {
+                        isHighlighted = true;
+                        offsetX = -14;
+                    } else {
+                        isDimmed = true;
+                    }
+                } else if (isDice) {
+                    const matchCat = !activeDiceParams.diceCategories || activeDiceParams.diceCategories.includes(prodCat);
+                    const matchReg = !activeDiceParams.diceRegions || activeDiceParams.diceRegions.includes(region);
+                    if (matchCat && matchReg) {
+                        isHighlighted = true;
+                    } else {
+                        isDimmed = true;
+                    }
+                }
+
+                // Center coordinates
+                const cx3d = (ix - (nx - 1) / 2) * spacing + offsetX;
+                const cy3d = (iy - (ny - 1) / 2) * spacing + offsetY;
+                const cz3d = (iz - (nz - 1) / 2) * spacing + offsetZ;
+
+                // 3D rotation math (Yaw then Pitch)
+                const rot = rotate3d(cx3d, cy3d, cz3d, cubeRotX, cubeRotY);
+                const proj = project(rot.x, rot.y, rot.z, centerX, centerY);
+
+                const key = `${ix},${iy},${iz}`;
+                const data = CUBE_CELL_DATA[key] || null;
+
+                voxels.push({
+                    ix, iy, iz,
+                    prodCat, region, timeQ,
+                    depth: rot.z,
+                    screenX: proj.x,
+                    screenY: proj.y,
+                    scale: proj.scale,
+                    boxSize: boxSize * proj.scale,
+                    isHighlighted,
+                    isDimmed,
+                    data
+                });
+            }
+        }
+    }
+
+    // Sort voxels back-to-front (Painter's algorithm)
+    voxels.sort((a, b) => b.depth - a.depth);
+
+    // Draw 3D coordinate axes behind the cube
+    drawCubeAxes(centerX, centerY, nx, ny, nz, spacing);
+
+    // Draw each 3D voxel block
+    voxels.forEach(v => {
+        drawVoxel(cubeCtx, v, hoveredVoxel === v);
+    });
+
+    // Save for hover hit-testing
+    currentRenderedVoxels = voxels;
+}
+
+let currentRenderedVoxels = [];
+
+function rotate3d(x, y, z, pitch, yaw) {
+    // Rotate around Y-axis (yaw)
+    const cosY = Math.cos(yaw);
+    const sinY = Math.sin(yaw);
+    const x1 = x * cosY + z * sinY;
+    const z1 = -x * sinY + z * cosY;
+
+    // Rotate around X-axis (pitch)
+    const cosX = Math.cos(pitch);
+    const sinX = Math.sin(pitch);
+    const y1 = y * cosX - z1 * sinX;
+    const z2 = y * sinX + z1 * cosX;
+
+    return { x: x1, y: y1, z: z2 };
+}
+
+function project(x, y, z, cx, cy) {
+    const focalLength = 550;
+    const scale = focalLength / (focalLength + z);
+    return {
+        x: cx + x * scale,
+        y: cy + y * scale,
+        scale: Math.max(0.4, scale)
+    };
+}
+
+function drawVoxel(ctx, v, isHovered) {
+    const s = v.boxSize / 2;
+    const x = v.screenX;
+    const y = v.screenY;
+
+    let baseColor = [30, 41, 59]; // Dark slate default
+    let borderColor = 'rgba(71, 85, 105, 0.4)';
+    let alpha = 0.85;
+
+    if (v.isHighlighted) {
+        baseColor = [245, 158, 11]; // Golden amber for Slice/Dice selection
+        borderColor = '#fbbf24';
+        alpha = 0.95;
+    } else if (v.data) {
+        baseColor = [56, 189, 248]; // Cyan glowing for cells with real sales
+        borderColor = '#38bdf8';
+        alpha = 0.90;
+    } else if (v.isDimmed) {
+        alpha = 0.15; // Transparent dimmed for non-slice blocks
+    }
+
+    if (isHovered) {
+        borderColor = '#ffffff';
+        baseColor = [99, 102, 241]; // Indigo highlight on hover
+        alpha = 1.0;
+    }
+
+    // Top Face
+    ctx.fillStyle = `rgba(${Math.min(255, baseColor[0] + 40)}, ${Math.min(255, baseColor[1] + 40)}, ${Math.min(255, baseColor[2] + 40)}, ${alpha})`;
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = isHovered ? 2 : 1;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y - s * 1.1);
+    ctx.lineTo(x + s * 1.0, y - s * 0.5);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x - s * 1.0, y - s * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Left Face
+    ctx.fillStyle = `rgba(${baseColor[0]}, ${baseColor[1]}, ${baseColor[2]}, ${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(x - s * 1.0, y - s * 0.5);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + s * 1.1);
+    ctx.lineTo(x - s * 1.0, y + s * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Right Face
+    ctx.fillStyle = `rgba(${Math.max(0, baseColor[0] - 25)}, ${Math.max(0, baseColor[1] - 25)}, ${Math.max(0, baseColor[2] - 25)}, ${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + s * 1.0, y - s * 0.5);
+    ctx.lineTo(x + s * 1.0, y + s * 0.6);
+    ctx.lineTo(x, y + s * 1.1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
+
+function drawCubeAxes(cx, cy, nx, ny, nz, spacing) {
+    if (!cubeCtx) return;
+    const len = 120;
+    const origin = rotate3d(0, 0, 0, cubeRotX, cubeRotY);
+    const p0 = project(origin.x, origin.y, origin.z, cx, cy);
+
+    // Axis X (Product) - Cyan
+    const pX = rotate3d(len, 0, 0, cubeRotX, cubeRotY);
+    const pXProj = project(pX.x, pX.y, pX.z, cx, cy);
+    drawAxisLine(cubeCtx, p0, pXProj, '#38bdf8', 'X: Product Category');
+
+    // Axis Y (Region / Depth) - Indigo
+    const pY = rotate3d(0, len, 0, cubeRotX, cubeRotY);
+    const pYProj = project(pY.x, pY.y, pY.z, cx, cy);
+    drawAxisLine(cubeCtx, p0, pYProj, '#818cf8', 'Y: Geography (Region)');
+
+    // Axis Z (Time / Vertical) - Emerald Green
+    const pZ = rotate3d(0, 0, -len, cubeRotX, cubeRotY);
+    const pZProj = project(pZ.x, pZ.y, pZ.z, cx, cy);
+    drawAxisLine(cubeCtx, p0, pZProj, '#34d399', 'Z: Time Dimension');
+}
+
+function drawAxisLine(ctx, from, to, color, label) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+
+    // Arrowhead
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(to.x - 10 * Math.cos(angle - Math.PI / 6), to.y - 10 * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(to.x - 10 * Math.cos(angle + Math.PI / 6), to.y - 10 * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+
+    // Label
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillStyle = color;
+    ctx.fillText(label, to.x + 8, to.y - 4);
+    ctx.restore();
+}
+
+function checkVoxelHover(canvasX, canvasY, clientX, clientY) {
+    let nearest = null;
+    let minDist = 20;
+
+    for (let i = 0; i < currentRenderedVoxels.length; i++) {
+        const v = currentRenderedVoxels[i];
+        const dist = Math.hypot(canvasX - v.screenX, canvasY - v.screenY);
+        if (dist < minDist) {
+            minDist = dist;
+            nearest = v;
+        }
+    }
+
+    if (nearest !== hoveredVoxel) {
+        hoveredVoxel = nearest;
+        if (hoveredVoxel) {
+            showCubeTooltip(hoveredVoxel, clientX, clientY);
+        } else {
+            hideCubeTooltip();
+        }
+    }
+}
+
+function showCubeTooltip(v, clientX, clientY) {
+    const tooltip = document.getElementById('cube3dTooltip');
+    if (!tooltip) return;
+
+    const valStr = v.data ? `$${v.data.val.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${v.data.qty} units)` : 'No sales records';
+
+    tooltip.innerHTML = `
+        <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Cell Coordinate (X, Y, Z)</div>
+        <div><strong>Product:</strong> ${escapeHtml(v.prodCat)}</div>
+        <div><strong>Region:</strong> ${escapeHtml(v.region)}</div>
+        <div><strong>Time:</strong> ${escapeHtml(v.timeQ)}</div>
+        <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); color: #34d399; font-weight: 700;">
+            Revenue: ${valStr}
+        </div>
+    `;
+
+    tooltip.style.display = 'block';
+    const wrapper = document.querySelector('.cube-canvas-wrapper');
+    if (wrapper) {
+        const rect = wrapper.getBoundingClientRect();
+        tooltip.style.left = `${clientX - rect.left + 15}px`;
+        tooltip.style.top = `${clientY - rect.top + 15}px`;
+    }
+}
+
+function hideCubeTooltip() {
+    const tooltip = document.getElementById('cube3dTooltip');
+    if (tooltip) tooltip.style.display = 'none';
+}
+
+// Hook into initCubeTab
+const origInitCubeTab = initCubeTab;
+initCubeTab = async function() {
+    await origInitCubeTab();
+    if (!cubeCanvas) {
+        init3dCube();
+    }
+};
+
+
