@@ -55,6 +55,7 @@ async function loadAllSales() {
         if (!res.ok) throw new Error('Failed to load sales');
         const sales = await res.json();
         allSalesCache = sales;
+        updateLiveCubeData(sales);
         renderSalesTable(sales);
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">Error loading sales: ${err.message}</td></tr>`;
@@ -541,6 +542,16 @@ async function initCubeTab() {
     if (!cubeMetadata) {
         await loadCubeMetadata();
     }
+    if (!allSalesCache || allSalesCache.length === 0) {
+        try {
+            const res = await fetch(`${API_BASE}/sales`);
+            if (res.ok) {
+                const sales = await res.json();
+                allSalesCache = sales;
+                updateLiveCubeData(sales);
+            }
+        } catch(e) {}
+    }
     applyCubeQuery();
 }
 
@@ -825,19 +836,30 @@ const CUBE_DIM_X = ['Electronics', 'Fashion & Apparel', 'Home & Living', 'Sports
 const CUBE_DIM_Y = ['East', 'West', 'North', 'South'];                                        // Region
 const CUBE_DIM_Z = ['2025 Q1', '2025 Q2', '2025 Q3', '2025 Q4'];                              // Time
 
-// Known realistic cell weights for lighting up cells
-const CUBE_CELL_DATA = {
-    '0,0,0': { val: 4399.97, qty: 5 }, // Electronics, East, Q1
-    '0,1,0': { val: 538.00,  qty: 2 }, // Electronics, West, Q1
-    '0,2,1': { val: 2548.00, qty: 3 }, // Electronics, North, Q2
-    '0,0,4': { val: 3228.98, qty: 4 }, // Electronics, East, 2026 Q1
-    '1,3,0': { val: 690.00,  qty: 1 }, // Fashion, South, Q1
-    '1,2,3': { val: 432.50,  qty: 2 }, // Fashion, North, Q4
-    '2,0,0': { val: 2400.00, qty: 4 }, // Home, East, Q1
-    '2,0,3': { val: 860.00,  qty: 2 }, // Home, East, Q4
-    '2,1,2': { val: 1299.00, qty: 1 }, // Home, West, Q3
-    '3,1,3': { val: 1875.00, qty: 3 }, // Sports, West, Q4
-};
+// Dynamic real cell weights populated directly from the database
+const CUBE_CELL_DATA = {};
+
+function updateLiveCubeData(salesList) {
+    if (!salesList || !Array.isArray(salesList)) return;
+    salesList.forEach(s => {
+        const cat = s.product?.category;
+        const reg = s.store?.region;
+        const q = s.time ? `${s.time.year} Q${s.time.quarter}` : null;
+
+        const ix = CUBE_DIM_X.indexOf(cat);
+        const iy = CUBE_DIM_Y.indexOf(reg);
+        const iz = CUBE_DIM_Z.indexOf(q);
+
+        if (ix !== -1 && iy !== -1 && iz !== -1) {
+            const k = `${ix},${iy},${iz}`;
+            if (!CUBE_CELL_DATA[k]) {
+                CUBE_CELL_DATA[k] = { val: 0, qty: 0 };
+            }
+            CUBE_CELL_DATA[k].val += (s.totalAmount || 0);
+            CUBE_CELL_DATA[k].qty += (s.quantity || 1);
+        }
+    });
+}
 
 function init3dCube() {
     cubeCanvas = document.getElementById('cube3dCanvas');

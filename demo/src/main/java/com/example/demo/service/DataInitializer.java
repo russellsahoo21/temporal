@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -36,89 +38,155 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         if (productRepo.count() > 0) {
-            return; // Data already exists
+            return; // Data already seeded
         }
 
-        // 1. Seed Products
-        ProductDimension p1 = productRepo.save(new ProductDimension("MacBook Pro M3", "Electronics", "Apple", 1499.99));
-        ProductDimension p2 = productRepo.save(new ProductDimension("Dell XPS 15", "Electronics", "Dell", 1299.00));
-        ProductDimension p3 = productRepo.save(new ProductDimension("Sony WH-1000XM5 Headphones", "Electronics", "Sony", 279.00));
-        ProductDimension p4 = productRepo.save(new ProductDimension("Air Jordan 1 Retro", "Fashion & Apparel", "Nike", 180.00));
-        ProductDimension p5 = productRepo.save(new ProductDimension("Classic Denim Jacket", "Fashion & Apparel", "Levi's", 89.50));
-        ProductDimension p6 = productRepo.save(new ProductDimension("Smart 4K OLED TV 65\"", "Home & Living", "Samsung", 1399.00));
-        ProductDimension p7 = productRepo.save(new ProductDimension("Espresso Coffee Maker Pro", "Home & Living", "Breville", 450.00));
-        ProductDimension p8 = productRepo.save(new ProductDimension("Mountain Trail Bike", "Sports & Outdoors", "Trek", 650.00));
-
-        // 2. Seed Stores / Regions
-        StoreDimension s1 = storeRepo.save(new StoreDimension("Manhattan 5th Ave", "New York", "NY", "East"));
-        StoreDimension s2 = storeRepo.save(new StoreDimension("Silicon Valley Hub", "San Francisco", "CA", "West"));
-        StoreDimension s3 = storeRepo.save(new StoreDimension("Michigan Ave Gallery", "Chicago", "IL", "North"));
-        StoreDimension s4 = storeRepo.save(new StoreDimension("Austin Tech Ridge", "Austin", "TX", "South"));
-        StoreDimension s5 = storeRepo.save(new StoreDimension("Seattle Pine Street", "Seattle", "WA", "West"));
-
-        // 3. Seed Time Dimension dates (2025 - 2026 dates)
-        LocalDate d1 = LocalDate.of(2025, 1, 15);
-        LocalDate d2 = LocalDate.of(2025, 2, 20);
-        LocalDate d3 = LocalDate.of(2025, 4, 10);
-        LocalDate d4 = LocalDate.of(2025, 6, 25);
-        LocalDate d5 = LocalDate.of(2025, 8, 14);
-        LocalDate d6 = LocalDate.of(2025, 10, 5);
-        LocalDate d7 = LocalDate.of(2025, 11, 28);
-        LocalDate d8 = LocalDate.of(2025, 12, 24);
-        LocalDate d9 = LocalDate.of(2026, 1, 18);
-        LocalDate d10 = LocalDate.of(2026, 2, 10);
-
-        TimeDimension t1 = timeRepo.save(new TimeDimension(d1));
-        TimeDimension t2 = timeRepo.save(new TimeDimension(d2));
-        TimeDimension t3 = timeRepo.save(new TimeDimension(d3));
-        TimeDimension t4 = timeRepo.save(new TimeDimension(d4));
-        TimeDimension t5 = timeRepo.save(new TimeDimension(d5));
-        TimeDimension t6 = timeRepo.save(new TimeDimension(d6));
-        TimeDimension t7 = timeRepo.save(new TimeDimension(d7));
-        TimeDimension t8 = timeRepo.save(new TimeDimension(d8));
-        TimeDimension t9 = timeRepo.save(new TimeDimension(d9));
-        TimeDimension t10 = timeRepo.save(new TimeDimension(d10));
-
-        // 4. Seed Fact Sales with Temporal Valid Ranges
-        createSale(p1, s1, t1, "TechCorp Industries", 3, 1499.99, 100.0, LocalDateTime.of(2025, 1, 1, 0, 0), null, "ACTIVE");
-        createSale(p3, s2, t2, "Alice Morgan", 2, 279.00, 20.0, LocalDateTime.of(2025, 2, 1, 0, 0), null, "ACTIVE");
-        createSale(p4, s4, t3, "David Miller", 4, 180.00, 30.0, LocalDateTime.of(2025, 4, 1, 0, 0), null, "ACTIVE");
-        createSale(p2, s3, t4, "Cybernetics Lab", 2, 1299.00, 50.0, LocalDateTime.of(2025, 6, 1, 0, 0), null, "ACTIVE");
-        createSale(p6, s5, t5, "Emma Watson", 1, 1399.00, 100.0, LocalDateTime.of(2025, 8, 1, 0, 0), null, "ACTIVE");
-        createSale(p7, s1, t6, "Robert Downey", 2, 450.00, 40.0, LocalDateTime.of(2025, 10, 1, 0, 0), null, "ACTIVE");
-        createSale(p5, s3, t7, "Sophia Chen", 5, 89.50, 15.0, LocalDateTime.of(2025, 11, 15, 0, 0), null, "ACTIVE");
-        createSale(p8, s2, t8, "Apex Adventure Club", 3, 650.00, 75.0, LocalDateTime.of(2025, 12, 1, 0, 0), null, "ACTIVE");
-        createSale(p1, s4, t9, "Innovate Tech Ltd", 2, 1499.99, 50.0, LocalDateTime.of(2026, 1, 1, 0, 0), null, "ACTIVE");
-        createSale(p3, s5, t10, "Brian Walker", 1, 279.00, 0.0, LocalDateTime.of(2026, 2, 1, 0, 0), null, "ACTIVE");
-
-        // Seed a Temporal historical revision example
-        SaleFact oldRev = createSale(p6, s1, t1, "Apex Media Group (Old Price Contract)", 2, 1200.00, 0.0,
-                LocalDateTime.of(2024, 1, 1, 0, 0),
-                LocalDateTime.of(2024, 12, 31, 23, 59),
-                "REVISED");
+        // ================= 1. SEED 16 PRODUCTS (5 CATEGORIES) =================
+        List<ProductDimension> products = new ArrayList<>();
+        // Electronics
+        products.add(productRepo.save(new ProductDimension("MacBook Pro M3 16\"", "Electronics", "Apple", 1999.00)));
+        products.add(productRepo.save(new ProductDimension("Dell XPS 15 OLED", "Electronics", "Dell", 1399.00)));
+        products.add(productRepo.save(new ProductDimension("Sony WH-1000XM5 Headphones", "Electronics", "Sony", 299.00)));
+        products.add(productRepo.save(new ProductDimension("iPhone 16 Pro Max", "Electronics", "Apple", 1199.00)));
+        products.add(productRepo.save(new ProductDimension("Samsung Galaxy S24 Ultra", "Electronics", "Samsung", 1149.00)));
         
-        createSale(p6, s1, t9, "Apex Media Group (Renewed Contract)", 2, 1399.00, 100.0,
-                LocalDateTime.of(2025, 1, 1, 0, 0),
-                null,
-                "ACTIVE");
+        // Fashion & Apparel
+        products.add(productRepo.save(new ProductDimension("Air Jordan 1 High OG", "Fashion & Apparel", "Nike", 190.00)));
+        products.add(productRepo.save(new ProductDimension("Classic Denim Trucker Jacket", "Fashion & Apparel", "Levi's", 98.00)));
+        products.add(productRepo.save(new ProductDimension("Tech Fleece Windrunner", "Fashion & Apparel", "Nike", 130.00)));
+        products.add(productRepo.save(new ProductDimension("Merino Wool Crew Sweater", "Fashion & Apparel", "Uniqlo", 79.50)));
+
+        // Home & Living
+        products.add(productRepo.save(new ProductDimension("Smart 4K OLED TV 65\"", "Home & Living", "Samsung", 1499.00)));
+        products.add(productRepo.save(new ProductDimension("Barista Touch Espresso Pro", "Home & Living", "Breville", 599.00)));
+        products.add(productRepo.save(new ProductDimension("Dyson V15 Cordless Vacuum", "Home & Living", "Dyson", 649.00)));
+        products.add(productRepo.save(new ProductDimension("Ergonomic Mesh Task Chair", "Home & Living", "Herman Miller", 895.00)));
+
+        // Sports & Outdoors
+        products.add(productRepo.save(new ProductDimension("FuelEx Mountain Trail Bike", "Sports & Outdoors", "Trek", 850.00)));
+        products.add(productRepo.save(new ProductDimension("Garmin Fenix 7 Solar Watch", "Sports & Outdoors", "Garmin", 699.00)));
+        products.add(productRepo.save(new ProductDimension("Hydro Flask Trail 32oz", "Sports & Outdoors", "Hydro Flask", 45.00)));
+
+        // ================= 2. SEED 8 STORES (4 REGIONS) =================
+        List<StoreDimension> stores = new ArrayList<>();
+        stores.add(storeRepo.save(new StoreDimension("Manhattan 5th Ave", "New York", "NY", "East")));
+        stores.add(storeRepo.save(new StoreDimension("Boston Back Bay", "Boston", "MA", "East")));
+        stores.add(storeRepo.save(new StoreDimension("Silicon Valley Hub", "San Francisco", "CA", "West")));
+        stores.add(storeRepo.save(new StoreDimension("Seattle Pine Street", "Seattle", "WA", "West")));
+        stores.add(storeRepo.save(new StoreDimension("Michigan Ave Gallery", "Chicago", "IL", "North")));
+        stores.add(storeRepo.save(new StoreDimension("Minneapolis Center", "Minneapolis", "MN", "North")));
+        stores.add(storeRepo.save(new StoreDimension("Austin Tech Ridge", "Austin", "TX", "South")));
+        stores.add(storeRepo.save(new StoreDimension("Miami Brickell Ave", "Miami", "FL", "South")));
+
+        // ================= 3. SEED TIME DIMENSIONS (2024 - 2026 across all Quarters/Months) =================
+        List<TimeDimension> timeDates = new ArrayList<>();
+        // 2024 Quarters
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2024, 2, 14))));  // 2024 Q1 (Feb)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2024, 5, 20))));  // 2024 Q2 (May)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2024, 8, 15))));  // 2024 Q3 (Aug)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2024, 11, 28)))); // 2024 Q4 (Nov)
+
+        // 2025 Quarters (Comprehensive coverage of Q1, Q2, Q3, Q4)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 1, 15))));  // 2025 Q1 (Jan)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 2, 22))));  // 2025 Q1 (Feb)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 3, 10))));  // 2025 Q1 (Mar)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 4, 18))));  // 2025 Q2 (Apr)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 5, 25))));  // 2025 Q2 (May)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 6, 12))));  // 2025 Q2 (Jun)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 7, 20))));  // 2025 Q3 (Jul)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 8, 14))));  // 2025 Q3 (Aug)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 9, 30))));  // 2025 Q3 (Sep)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 10, 15)))); // 2025 Q4 (Oct)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 11, 25)))); // 2025 Q4 (Nov)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2025, 12, 24)))); // 2025 Q4 (Dec)
+
+        // 2026 Quarters
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2026, 1, 18))));  // 2026 Q1 (Jan)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2026, 2, 10))));  // 2026 Q1 (Feb)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2026, 3, 22))));  // 2026 Q1 (Mar)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2026, 4, 15))));  // 2026 Q2 (Apr)
+        timeDates.add(timeRepo.save(new TimeDimension(LocalDate.of(2026, 5, 8))));   // 2026 Q2 (May)
+
+        // ================= 4. REALISTIC CUSTOMER ROSTER =================
+        String[] customers = {
+            "TechCorp Global", "Apex Media Group", "Innovate Analytics", "Nexus Retail Ltd",
+            "Horizon Financial", "Vanguard Logistics", "Quantum Systems", "Starlight Media",
+            "David Miller", "Alice Morgan", "Robert Downey", "Sophia Chen",
+            "Brian Walker", "Emma Watson", "Marcus Brody", "Elena Rostova",
+            "James Wilson", "Chloe Bennett", "Liam O'Connor", "Aria Stark",
+            "Global Venture Hub", "Summit Outdoor Club", "Pacific Coast Design", "Metro Studio NYC"
+        };
+
+        // ================= 5. SEED 130 REALISTIC SALES TRANSACTIONS =================
+        Random rand = new Random(42); // Deterministic seed for reproducible dataset
+
+        // Create dense coverage across products, stores, and times
+        for (int i = 0; i < 120; i++) {
+            ProductDimension prod = products.get(rand.nextInt(products.size()));
+            StoreDimension store = stores.get(rand.nextInt(stores.size()));
+            TimeDimension time = timeDates.get(rand.nextInt(timeDates.size()));
+            String customer = customers[rand.nextInt(customers.length)];
+
+            int quantity = 1 + rand.nextInt(5); // 1 to 5 units
+            double unitPrice = prod.getUnitCost();
+            double discount = rand.nextBoolean() ? Math.round((rand.nextDouble() * 50.0) * 100.0) / 100.0 : 0.0;
+
+            LocalDate saleDate = time.getDate();
+            LocalDateTime validFrom = saleDate.atTime(8 + rand.nextInt(12), rand.nextInt(60));
+            LocalDateTime validTo = null; // Current active records
+
+            createSale(prod, store, time, customer, quantity, unitPrice, discount, validFrom, validTo, "ACTIVE");
+        }
+
+        // Add 10 explicit Temporal Revision Examples (Historic contracts revised over time)
+        for (int j = 0; j < 10; j++) {
+            ProductDimension prod = products.get(j % products.size());
+            StoreDimension store = stores.get(j % stores.size());
+            TimeDimension time = timeDates.get(j % timeDates.size());
+            String customer = customers[j % customers.length] + " (Enterprise Contract)";
+
+            // Historical Version (Old contract valid in 2024)
+            createSale(prod, store, time, customer, 3, prod.getUnitCost() * 0.9, 0.0,
+                    LocalDateTime.of(2024, 1, 1, 0, 0),
+                    LocalDateTime.of(2024, 12, 31, 23, 59),
+                    "REVISED");
+
+            // Current Version (Active contract valid in 2025/2026)
+            createSale(prod, store, time, customer, 3, prod.getUnitCost(), 50.0,
+                    LocalDateTime.of(2025, 1, 1, 0, 0),
+                    null,
+                    "ACTIVE");
+        }
     }
 
-    private SaleFact createSale(ProductDimension p, StoreDimension s, TimeDimension t,
-                                String customer, int qty, double price, double discount,
-                                LocalDateTime validFrom, LocalDateTime validTo, String status) {
+    private SaleFact createSale(ProductDimension product,
+                                StoreDimension store,
+                                TimeDimension time,
+                                String customer,
+                                int quantity,
+                                double unitPrice,
+                                double discount,
+                                LocalDateTime validFrom,
+                                LocalDateTime validTo,
+                                String status) {
+        double totalAmount = (quantity * unitPrice) - discount;
+        if (totalAmount < 0) totalAmount = 0.0;
+        totalAmount = Math.round(totalAmount * 100.0) / 100.0;
+
         SaleFact sale = new SaleFact();
-        sale.setProductDimension(p);
-        sale.setStoreDimension(s);
-        sale.setTimeDimension(t);
+        sale.setProductDimension(product);
+        sale.setStoreDimension(store);
+        sale.setTimeDimension(time);
         sale.setCustomerName(customer);
-        sale.setQuantity(qty);
-        sale.setUnitPrice(price);
+        sale.setQuantity(quantity);
+        sale.setUnitPrice(unitPrice);
         sale.setDiscount(discount);
-        sale.setTotalAmount((qty * price) - discount);
+        sale.setTotalAmount(totalAmount);
         sale.setValidFrom(validFrom);
         sale.setValidTo(validTo);
         sale.setTransactionTime(LocalDateTime.now());
         sale.setStatus(status);
+
         return saleRepo.save(sale);
     }
 }
