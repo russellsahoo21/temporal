@@ -13,3 +13,9 @@ demo/.mvn/wrapper/maven-wrapper.jar
 .settings/
 .classpath
 .project
+
+# Environment Secrets
+.env
+.env.local
+*.env
+
