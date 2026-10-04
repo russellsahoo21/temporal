@@ -920,4 +920,102 @@ body {
     display: inline-block;
 }
 
+/* OLAP Operations Control Panels */
+.olap-operations-panel {
+    background: #111a2e;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.olap-ops-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.olap-ops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+}
+
+.dice-chips-container {
+    background-color: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 14px;
+    display: none;
+}
+
+.dice-chips-container.active {
+    display: block;
+}
+
+.dice-chip-group {
+    margin-bottom: 10px;
+}
+
+.dice-chip-group:last-child {
+    margin-bottom: 0;
+}
+
+.dice-chip-group-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.dice-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dice-chip {
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    background-color: #1e293b;
+    color: var(--text-secondary);
+    border: 1px solid #334155;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.dice-chip:hover {
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+.dice-chip.active {
+    background-color: rgba(56, 189, 248, 0.18);
+    color: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+}
+
+.op-badge-indicator {
+    display: inline-block;
+    padding: 2px 7px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
+    margin-left: 6px;
+}
+
+
 

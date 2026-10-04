@@ -152,25 +152,32 @@ public class OlapCubeService {
         resp.setColTotals(colTotals);
         resp.setGrandTotal(grandTotal);
 
-        // Classify Operation for Teacher Demonstration
-        if (isSliced) {
+        // Classify Operation for Academic Demonstration
+        String reqOp = req.getRequestedOperation() != null ? req.getRequestedOperation().trim().toUpperCase() : null;
+
+        if ("SLICE".equals(reqOp) || isSliced) {
             resp.setAppliedOperation("SLICE");
-            resp.setOperationTitle("Slice Operation");
-            resp.setOperationExplanation(sliceExplanation);
-        } else if (isDiced) {
+            resp.setOperationTitle("Slice Operation (Fixed 1D Plane)");
+            resp.setOperationExplanation(isSliced ? sliceExplanation : "Slice isolates a 2D plane by fixing one dimension to a single constant value.");
+        } else if ("DICE".equals(reqOp) || isDiced) {
             resp.setAppliedOperation("DICE");
-            resp.setOperationTitle("Dice Operation");
-            resp.setOperationExplanation("Dice applied on multiple dimensions (" + diceExplanation.toString().trim() + "). A filtered sub-cube was isolated.");
-        } else if (timeHier.equals("MONTH") || timeHier.equals("YEAR")) {
-            resp.setAppliedOperation(timeHier.equals("MONTH") ? "DRILL_DOWN" : "ROLL_UP");
-            resp.setOperationTitle(timeHier.equals("MONTH") ? "Drill-down (Time Dimension)" : "Roll-up (Time Dimension)");
-            resp.setOperationExplanation(timeHier.equals("MONTH")
-                    ? "Drill-down navigated from Quarter level down to Month level for finer granularity."
-                    : "Roll-up aggregated the Time hierarchy up to Year level for broad trend analysis.");
-        } else if (rowDim.equalsIgnoreCase("region") || rowDim.equalsIgnoreCase("storeName")) {
+            resp.setOperationTitle("Dice Operation (Sub-Cube Extraction)");
+            resp.setOperationExplanation(isDiced 
+                    ? "Dice applied across multiple dimensions (" + diceExplanation.toString().trim() + "). A filtered sub-cube was isolated."
+                    : "Dice selects a sub-cube by specifying subset criteria across two or more dimensions simultaneously.");
+        } else if ("DRILL_DOWN".equals(reqOp) || timeHier.equals("MONTH") || rowDim.equalsIgnoreCase("productBrand") || rowDim.equalsIgnoreCase("productName") || rowDim.equalsIgnoreCase("storeName") || rowDim.equalsIgnoreCase("city")) {
+            resp.setAppliedOperation("DRILL_DOWN");
+            String drillTarget = timeHier.equals("MONTH") ? "Time (Quarter -> Month)" : (rowDim.equalsIgnoreCase("productBrand") || rowDim.equalsIgnoreCase("productName") ? "Product (Category -> " + rowDim + ")" : "Geography (Region -> " + rowDim + ")");
+            resp.setOperationTitle("Drill-down Operation (" + drillTarget + ")");
+            resp.setOperationExplanation("Drill-down navigated down the dimension hierarchy: decomposed summary data into finer, granular detail (" + drillTarget + ").");
+        } else if ("ROLL_UP".equals(reqOp) || timeHier.equals("YEAR")) {
+            resp.setAppliedOperation("ROLL_UP");
+            resp.setOperationTitle("Roll-up Operation (Time Dimension: Quarter -> Year)");
+            resp.setOperationExplanation("Roll-up climbed up the dimension hierarchy: aggregated detailed time periods into broad annual summaries (coarser granularity).");
+        } else if ("PIVOT".equals(reqOp) || rowDim.equalsIgnoreCase("region") || rowDim.equalsIgnoreCase("storeName") || (!rowDim.equalsIgnoreCase("productCategory") && !colDim.equalsIgnoreCase("timePeriod"))) {
             resp.setAppliedOperation("PIVOT");
-            resp.setOperationTitle("Pivot Operation");
-            resp.setOperationExplanation("Rotated the cube's orientation: rows represent '" + rowDim + "' and columns represent '" + colDim + "'.");
+            resp.setOperationTitle("Pivot Operation (Rotate Axes)");
+            resp.setOperationExplanation("Rotated the cube's orientation: transposed axes so rows represent '" + rowDim + "' and columns represent '" + colDim + "' like a multidimensional cross-tab.");
         } else {
             resp.setAppliedOperation("STANDARD");
             resp.setOperationTitle("Full Multidimensional Cube View");

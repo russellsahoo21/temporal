@@ -537,6 +537,7 @@ function showToast(msg, type = 'info') {
 let cubeMetadata = null;
 let currentCubeHierarchy = 'QUARTER';
 let activeDiceParams = null;
+let activeRequestedOperation = null;
 
 async function initCubeTab() {
     if (!cubeMetadata) {
@@ -565,6 +566,7 @@ async function loadCubeMetadata() {
     }
 }
 
+// ---------------- 1. SLICE OPERATION ----------------
 function onSliceDimChanged() {
     const dimSelect = document.getElementById('cubeSliceDimSelect');
     const valSelect = document.getElementById('cubeSliceValSelect');
@@ -575,6 +577,7 @@ function onSliceDimChanged() {
     if (!selectedDim) {
         valSelect.disabled = true;
         valSelect.innerHTML = '<option value="">Select dimension first</option>';
+        activeRequestedOperation = null;
         applyCubeQuery();
         return;
     }
@@ -596,25 +599,154 @@ function onSliceDimChanged() {
         });
     }
 
-    // Default to the first available value
     if (valSelect.options.length > 1) {
         valSelect.selectedIndex = 1;
+    }
+    onSliceValChanged();
+}
+
+function onSliceValChanged() {
+    const sliceVal = document.getElementById('cubeSliceValSelect')?.value;
+    if (sliceVal) {
+        activeRequestedOperation = 'SLICE';
+        // Reset dice when slicing
+        const diceSelect = document.getElementById('cubeDiceSelect');
+        if (diceSelect) diceSelect.value = '';
+        activeDiceParams = null;
+        document.getElementById('customDicePanel')?.classList.remove('active');
     }
     applyCubeQuery();
 }
 
-function setTimeHierarchy(level) {
-    currentCubeHierarchy = level;
-    document.querySelectorAll('.time-hier-btn').forEach(btn => btn.classList.remove('active'));
+// ---------------- 2. DICE OPERATION ----------------
+function onDicePresetChanged() {
+    const diceSelect = document.getElementById('cubeDiceSelect');
+    const customPanel = document.getElementById('customDicePanel');
+    const val = diceSelect ? diceSelect.value : '';
 
-    if (level === 'YEAR') {
-        document.getElementById('hierYearBtn')?.classList.add('active');
-    } else if (level === 'QUARTER') {
-        document.getElementById('hierQuarterBtn')?.classList.add('active');
-    } else if (level === 'MONTH') {
-        document.getElementById('hierMonthBtn')?.classList.add('active');
+    // Reset slice to avoid conflicting operations
+    const sliceDim = document.getElementById('cubeSliceDimSelect');
+    const sliceVal = document.getElementById('cubeSliceValSelect');
+    if (sliceDim) sliceDim.value = '';
+    if (sliceVal) {
+        sliceVal.innerHTML = '<option value="">Select dimension first</option>';
+        sliceVal.disabled = true;
     }
 
+    if (val === 'preset1') {
+        customPanel?.classList.remove('active');
+        activeDiceParams = {
+            diceCategories: ['Electronics', 'Fashion & Apparel'],
+            diceRegions: ['East', 'West']
+        };
+        syncDiceChips(activeDiceParams);
+        activeRequestedOperation = 'DICE';
+    } else if (val === 'preset2') {
+        customPanel?.classList.remove('active');
+        activeDiceParams = {
+            diceCategories: ['Electronics', 'Home & Living'],
+            diceYears: [2025]
+        };
+        syncDiceChips(activeDiceParams);
+        activeRequestedOperation = 'DICE';
+    } else if (val === 'preset3') {
+        customPanel?.classList.remove('active');
+        activeDiceParams = {
+            diceCategories: ['Home & Living', 'Sports & Outdoors'],
+            diceRegions: ['North', 'South']
+        };
+        syncDiceChips(activeDiceParams);
+        activeRequestedOperation = 'DICE';
+    } else if (val === 'custom') {
+        customPanel?.classList.add('active');
+        collectCustomDiceChips();
+        activeRequestedOperation = 'DICE';
+    } else {
+        customPanel?.classList.remove('active');
+        activeDiceParams = null;
+        activeRequestedOperation = null;
+    }
+
+    applyCubeQuery();
+}
+
+function toggleDiceChip(el) {
+    el.classList.toggle('active');
+    const diceSelect = document.getElementById('cubeDiceSelect');
+    if (diceSelect && diceSelect.value !== 'custom') {
+        diceSelect.value = 'custom';
+    }
+    document.getElementById('customDicePanel')?.classList.add('active');
+    collectCustomDiceChips();
+    activeRequestedOperation = 'DICE';
+    applyCubeQuery();
+}
+
+function collectCustomDiceChips() {
+    const cats = Array.from(document.querySelectorAll('#diceCategoryChips .dice-chip.active')).map(c => c.dataset.val);
+    const regs = Array.from(document.querySelectorAll('#diceRegionChips .dice-chip.active')).map(r => r.dataset.val);
+    const yrs = Array.from(document.querySelectorAll('#diceYearChips .dice-chip.active')).map(y => parseInt(y.dataset.val, 10));
+
+    activeDiceParams = {
+        diceCategories: cats.length ? cats : null,
+        diceRegions: regs.length ? regs : null,
+        diceYears: yrs.length ? yrs : null
+    };
+}
+
+function syncDiceChips(params) {
+    if (!params) return;
+    document.querySelectorAll('#diceCategoryChips .dice-chip').forEach(c => {
+        c.classList.toggle('active', !params.diceCategories || params.diceCategories.includes(c.dataset.val));
+    });
+    document.querySelectorAll('#diceRegionChips .dice-chip').forEach(r => {
+        r.classList.toggle('active', !params.diceRegions || params.diceRegions.includes(r.dataset.val));
+    });
+    document.querySelectorAll('#diceYearChips .dice-chip').forEach(y => {
+        y.classList.toggle('active', !params.diceYears || params.diceYears.includes(parseInt(y.dataset.val, 10)));
+    });
+}
+
+// ---------------- 3. PIVOT OPERATION ----------------
+function onPivotPresetChanged() {
+    const pivotSelect = document.getElementById('cubePivotSelect');
+    const rowSelect = document.getElementById('cubeRowDimSelect');
+    const colSelect = document.getElementById('cubeColDimSelect');
+    const val = pivotSelect ? pivotSelect.value : 'default';
+
+    switch (val) {
+        case 'region-cat':
+            rowSelect.value = 'region';
+            colSelect.value = 'productCategory';
+            break;
+        case 'region-time':
+            rowSelect.value = 'region';
+            colSelect.value = 'timePeriod';
+            break;
+        case 'time-cat':
+            rowSelect.value = 'timePeriod';
+            colSelect.value = 'productCategory';
+            break;
+        case 'time-region':
+            rowSelect.value = 'timePeriod';
+            colSelect.value = 'region';
+            break;
+        case 'brand-region':
+            rowSelect.value = 'productBrand';
+            colSelect.value = 'region';
+            break;
+        case 'store-time':
+            rowSelect.value = 'storeName';
+            colSelect.value = 'timePeriod';
+            break;
+        case 'default':
+        default:
+            rowSelect.value = 'productCategory';
+            colSelect.value = 'timePeriod';
+            break;
+    }
+
+    activeRequestedOperation = 'PIVOT';
     applyCubeQuery();
 }
 
@@ -625,7 +757,110 @@ function pivotCubeAxes() {
     rowSelect.value = colSelect.value;
     colSelect.value = temp;
 
-    activeDiceParams = null;
+    const pivotSelect = document.getElementById('cubePivotSelect');
+    if (pivotSelect) {
+        // Try to match preset
+        const currentPair = `${rowSelect.value}-${colSelect.value}`;
+        const match = Array.from(pivotSelect.options).find(opt => {
+            if (opt.value === 'region-cat' && rowSelect.value === 'region' && colSelect.value === 'productCategory') return true;
+            if (opt.value === 'region-time' && rowSelect.value === 'region' && colSelect.value === 'timePeriod') return true;
+            if (opt.value === 'time-cat' && rowSelect.value === 'timePeriod' && colSelect.value === 'productCategory') return true;
+            if (opt.value === 'time-region' && rowSelect.value === 'timePeriod' && colSelect.value === 'region') return true;
+            return false;
+        });
+        if (match) {
+            pivotSelect.value = match.value;
+        }
+    }
+
+    activeRequestedOperation = 'PIVOT';
+    applyCubeQuery();
+}
+
+// ---------------- 4. DRILL-DOWN OPERATION ----------------
+function onDrillDownChanged() {
+    const drillSelect = document.getElementById('cubeDrillDownSelect');
+    const rowSelect = document.getElementById('cubeRowDimSelect');
+    const colSelect = document.getElementById('cubeColDimSelect');
+    const val = drillSelect ? drillSelect.value : '';
+
+    if (!val) {
+        applyCubeQuery();
+        return;
+    }
+
+    // Reset Roll-Up select
+    const rollSelect = document.getElementById('cubeRollUpSelect');
+    if (rollSelect) rollSelect.value = '';
+
+    if (val === 'time-month') {
+        setTimeHierarchy('MONTH');
+    } else if (val === 'prod-brand') {
+        rowSelect.value = 'productBrand';
+        if (colSelect.value === 'productBrand') colSelect.value = 'region';
+    } else if (val === 'prod-name') {
+        rowSelect.value = 'productName';
+        if (colSelect.value === 'productName') colSelect.value = 'region';
+    } else if (val === 'geo-store') {
+        rowSelect.value = 'storeName';
+        if (colSelect.value === 'storeName') colSelect.value = 'timePeriod';
+    } else if (val === 'geo-city') {
+        rowSelect.value = 'city';
+        if (colSelect.value === 'city') colSelect.value = 'timePeriod';
+    }
+
+    activeRequestedOperation = 'DRILL_DOWN';
+    applyCubeQuery();
+}
+
+// ---------------- 5. ROLL-UP OPERATION ----------------
+function onRollUpChanged() {
+    const rollSelect = document.getElementById('cubeRollUpSelect');
+    const rowSelect = document.getElementById('cubeRowDimSelect');
+    const colSelect = document.getElementById('cubeColDimSelect');
+    const val = rollSelect ? rollSelect.value : '';
+
+    if (!val) {
+        applyCubeQuery();
+        return;
+    }
+
+    // Reset Drill-down select
+    const drillSelect = document.getElementById('cubeDrillDownSelect');
+    if (drillSelect) drillSelect.value = '';
+
+    if (val === 'time-year') {
+        setTimeHierarchy('YEAR');
+    } else if (val === 'prod-cat') {
+        rowSelect.value = 'productCategory';
+        if (colSelect.value === 'productCategory') colSelect.value = 'region';
+    } else if (val === 'geo-reg') {
+        rowSelect.value = 'region';
+        if (colSelect.value === 'region') colSelect.value = 'productCategory';
+    }
+
+    activeRequestedOperation = 'ROLL_UP';
+    applyCubeQuery();
+}
+
+function setTimeHierarchy(level) {
+    currentCubeHierarchy = level;
+    document.querySelectorAll('.time-hier-btn').forEach(btn => btn.classList.remove('active'));
+
+    if (level === 'YEAR') {
+        document.getElementById('hierYearBtn')?.classList.add('active');
+        const rollSelect = document.getElementById('cubeRollUpSelect');
+        if (rollSelect) rollSelect.value = 'time-year';
+        activeRequestedOperation = 'ROLL_UP';
+    } else if (level === 'QUARTER') {
+        document.getElementById('hierQuarterBtn')?.classList.add('active');
+    } else if (level === 'MONTH') {
+        document.getElementById('hierMonthBtn')?.classList.add('active');
+        const drillSelect = document.getElementById('cubeDrillDownSelect');
+        if (drillSelect) drillSelect.value = 'time-month';
+        activeRequestedOperation = 'DRILL_DOWN';
+    }
+
     applyCubeQuery();
 }
 
@@ -633,23 +868,57 @@ function resetCubeFilters() {
     document.getElementById('cubeRowDimSelect').value = 'productCategory';
     document.getElementById('cubeColDimSelect').value = 'timePeriod';
     document.getElementById('cubeMeasureSelect').value = 'REVENUE';
-    document.getElementById('cubeSliceDimSelect').value = '';
     
+    // Reset Slice
+    const sliceDim = document.getElementById('cubeSliceDimSelect');
+    if (sliceDim) sliceDim.value = '';
     const sliceValSelect = document.getElementById('cubeSliceValSelect');
-    sliceValSelect.innerHTML = '<option value="">Select dimension first</option>';
-    sliceValSelect.disabled = true;
+    if (sliceValSelect) {
+        sliceValSelect.innerHTML = '<option value="">Select dimension first</option>';
+        sliceValSelect.disabled = true;
+    }
+
+    // Reset Dice
+    const diceSelect = document.getElementById('cubeDiceSelect');
+    if (diceSelect) diceSelect.value = '';
+    document.getElementById('customDicePanel')?.classList.remove('active');
+    activeDiceParams = null;
+
+    // Reset Pivot
+    const pivotSelect = document.getElementById('cubePivotSelect');
+    if (pivotSelect) pivotSelect.value = 'default';
+
+    // Reset Drill-down & Roll-up
+    const drillSelect = document.getElementById('cubeDrillDownSelect');
+    if (drillSelect) drillSelect.value = '';
+    const rollSelect = document.getElementById('cubeRollUpSelect');
+    if (rollSelect) rollSelect.value = '';
 
     setTimeHierarchy('QUARTER');
-    activeDiceParams = null;
+    activeRequestedOperation = 'STANDARD';
     applyCubeQuery();
 }
 
 function runCubePreset(preset) {
     activeDiceParams = null;
+    activeRequestedOperation = null;
+
     const rowSelect = document.getElementById('cubeRowDimSelect');
     const colSelect = document.getElementById('cubeColDimSelect');
     const sliceDim = document.getElementById('cubeSliceDimSelect');
     const sliceVal = document.getElementById('cubeSliceValSelect');
+    const diceSelect = document.getElementById('cubeDiceSelect');
+    const pivotSelect = document.getElementById('cubePivotSelect');
+    const drillSelect = document.getElementById('cubeDrillDownSelect');
+    const rollSelect = document.getElementById('cubeRollUpSelect');
+    const customDice = document.getElementById('customDicePanel');
+
+    // Clear panels
+    if (customDice) customDice.classList.remove('active');
+    if (drillSelect) drillSelect.value = '';
+    if (rollSelect) rollSelect.value = '';
+    if (diceSelect) diceSelect.value = '';
+    if (pivotSelect) pivotSelect.value = 'default';
 
     if (preset === 'standard') {
         resetCubeFilters();
@@ -662,6 +931,7 @@ function runCubePreset(preset) {
         sliceDim.value = 'timeYear';
         onSliceDimChanged();
         sliceVal.value = '2025';
+        activeRequestedOperation = 'SLICE';
         applyCubeQuery();
         return;
     }
@@ -671,10 +941,13 @@ function runCubePreset(preset) {
         colSelect.value = 'region';
         sliceDim.value = '';
         sliceVal.disabled = true;
+        if (diceSelect) diceSelect.value = 'preset1';
         activeDiceParams = {
             diceCategories: ['Electronics', 'Fashion & Apparel'],
             diceRegions: ['East', 'West']
         };
+        syncDiceChips(activeDiceParams);
+        activeRequestedOperation = 'DICE';
         applyCubeQuery();
         return;
     }
@@ -684,6 +957,8 @@ function runCubePreset(preset) {
         colSelect.value = 'productCategory';
         sliceDim.value = '';
         sliceVal.disabled = true;
+        if (pivotSelect) pivotSelect.value = 'region-cat';
+        activeRequestedOperation = 'PIVOT';
         applyCubeQuery();
         return;
     }
@@ -691,6 +966,7 @@ function runCubePreset(preset) {
     if (preset === 'drilldown') {
         rowSelect.value = 'productCategory';
         colSelect.value = 'timePeriod';
+        if (drillSelect) drillSelect.value = 'time-month';
         setTimeHierarchy('MONTH');
         return;
     }
@@ -698,6 +974,7 @@ function runCubePreset(preset) {
     if (preset === 'rollup') {
         rowSelect.value = 'productCategory';
         colSelect.value = 'timePeriod';
+        if (rollSelect) rollSelect.value = 'time-year';
         setTimeHierarchy('YEAR');
         return;
     }
@@ -716,7 +993,8 @@ async function applyCubeQuery() {
         timeHierarchy: currentCubeHierarchy,
         measure: measure,
         sliceDimension: sliceDim || null,
-        sliceValue: sliceVal || null
+        sliceValue: sliceVal || null,
+        requestedOperation: activeRequestedOperation
     };
 
     if (activeDiceParams) {
@@ -742,6 +1020,7 @@ async function applyCubeQuery() {
         tableBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">Error: ${escapeHtml(err.message)}</td></tr>`;
     }
 }
+
 
 function renderCubeMatrix(data) {
     // 1. Update Operation Banner

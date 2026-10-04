@@ -17,6 +17,9 @@ public class CubeQueryRequest {
     private List<String> diceRegions;
     private List<Integer> diceYears;
 
+    // Explicit OLAP Operation Tracker
+    private String requestedOperation; // SLICE, DICE, PIVOT, DRILL_DOWN, ROLL_UP, STANDARD
+
     public CubeQueryRequest() {}
 
     public String getRowDimension() {
@@ -90,4 +93,13 @@ public class CubeQueryRequest {
     public void setDiceYears(List<Integer> diceYears) {
         this.diceYears = diceYears;
     }
+
+    public String getRequestedOperation() {
+        return requestedOperation;
+    }
+
+    public void setRequestedOperation(String requestedOperation) {
+        this.requestedOperation = requestedOperation;
+    }
 }
+

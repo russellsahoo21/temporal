@@ -231,27 +231,118 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="cubeSliceDimSelect">Slice Dimension (Fixed Cut)</label>
-                            <select id="cubeSliceDimSelect" onchange="onSliceDimChanged()">
-                                <option value="">None (Full Cube)</option>
-                                <option value="timeYear">Time (Year)</option>
-                                <option value="region">Geography (Region)</option>
-                                <option value="productCategory">Product (Category)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cubeSliceValSelect">Slice Value</label>
-                            <select id="cubeSliceValSelect" onchange="applyCubeQuery()" disabled>
-                                <option value="">Select dimension first</option>
-                            </select>
-                        </div>
                     </div>
 
-                    <div class="cube-action-row mt-3">
-                        <button class="btn btn-outline btn-sm" onclick="pivotCubeAxes()">Rotate Axes (Pivot)</button>
-                        <button class="btn btn-secondary btn-sm" onclick="resetCubeFilters()">Reset to Default Cube</button>
+                    <!-- The 5 Classic OLAP Operations Controls -->
+                    <div class="olap-operations-panel">
+                        <div class="olap-ops-title">
+                            <span>Interactive OLAP Cube Operations</span>
+                            <span class="text-secondary" style="font-size:0.75rem; text-transform:none; font-weight:normal;">(Slice &bull; Dice &bull; Pivot &bull; Drill-Down &bull; Roll-Up)</span>
+                        </div>
+                        <div class="olap-ops-grid">
+                            <!-- 1. SLICE -->
+                            <div class="form-group">
+                                <label for="cubeSliceDimSelect">Slice Dimension (Fixed Cut) <span class="op-badge-indicator">Slice</span></label>
+                                <select id="cubeSliceDimSelect" onchange="onSliceDimChanged()">
+                                    <option value="">None (Full Cube)</option>
+                                    <option value="timeYear">Time (Year)</option>
+                                    <option value="region">Geography (Region)</option>
+                                    <option value="productCategory">Product (Category)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cubeSliceValSelect">Slice Value</label>
+                                <select id="cubeSliceValSelect" onchange="onSliceValChanged()" disabled>
+                                    <option value="">Select dimension first</option>
+                                </select>
+                            </div>
+
+                            <!-- 2. DICE -->
+                            <div class="form-group">
+                                <label for="cubeDiceSelect">Dice Filter (Sub-Cube) <span class="op-badge-indicator">Dice</span></label>
+                                <select id="cubeDiceSelect" onchange="onDicePresetChanged()">
+                                    <option value="">None (Full Cube)</option>
+                                    <option value="preset1">Preset: Electronics & Fashion in East & West</option>
+                                    <option value="preset2">Preset: TechCorp & Enterprise Clients in 2025</option>
+                                    <option value="preset3">Preset: Home & Living + Sports in North & South</option>
+                                    <option value="custom">Custom Multi-Dimension Sub-Cube...</option>
+                                </select>
+                            </div>
+
+                            <!-- 3. PIVOT -->
+                            <div class="form-group">
+                                <label for="cubePivotSelect">Pivot (Rotate Axes) <span class="op-badge-indicator">Pivot</span></label>
+                                <select id="cubePivotSelect" onchange="onPivotPresetChanged()">
+                                    <option value="default">Default: Category (Row) &times; Time (Col)</option>
+                                    <option value="region-cat">Pivot: Region (Row) &times; Category (Col)</option>
+                                    <option value="region-time">Pivot: Region (Row) &times; Time (Col)</option>
+                                    <option value="time-cat">Pivot: Time (Row) &times; Category (Col)</option>
+                                    <option value="time-region">Pivot: Time (Row) &times; Region (Col)</option>
+                                    <option value="brand-region">Pivot: Brand (Row) &times; Region (Col)</option>
+                                    <option value="store-time">Pivot: Store (Row) &times; Time (Col)</option>
+                                </select>
+                            </div>
+
+                            <!-- 4. DRILL-DOWN -->
+                            <div class="form-group">
+                                <label for="cubeDrillDownSelect">Drill-Down (Finer Detail) <span class="op-badge-indicator">Drill-Down</span></label>
+                                <select id="cubeDrillDownSelect" onchange="onDrillDownChanged()">
+                                    <option value="">Current Level (Select to Drill Down)</option>
+                                    <option value="time-month">Time: Quarter &rarr; Month (Finer Dates)</option>
+                                    <option value="prod-brand">Product: Category &rarr; Product Brand</option>
+                                    <option value="prod-name">Product: Category &rarr; Product Name</option>
+                                    <option value="geo-store">Geography: Region &rarr; Store Name</option>
+                                    <option value="geo-city">Geography: Region &rarr; City</option>
+                                </select>
+                            </div>
+
+                            <!-- 5. ROLL-UP -->
+                            <div class="form-group">
+                                <label for="cubeRollUpSelect">Roll-Up (Coarser Summary) <span class="op-badge-indicator">Roll-Up</span></label>
+                                <select id="cubeRollUpSelect" onchange="onRollUpChanged()">
+                                    <option value="">Current Level (Select to Roll Up)</option>
+                                    <option value="time-year">Time: Month / Quarter &rarr; Year (Annual)</option>
+                                    <option value="prod-cat">Product: Brand / Name &rarr; Product Category</option>
+                                    <option value="geo-reg">Geography: Store / City &rarr; Region Total</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Custom Dice Selection Chips -->
+                        <div class="dice-chips-container" id="customDicePanel">
+                            <div class="dice-chip-group">
+                                <div class="dice-chip-group-title">Select Categories (Subset):</div>
+                                <div class="dice-chip-list" id="diceCategoryChips">
+                                    <span class="dice-chip active" data-type="category" data-val="Electronics" onclick="toggleDiceChip(this)">Electronics</span>
+                                    <span class="dice-chip active" data-type="category" data-val="Fashion & Apparel" onclick="toggleDiceChip(this)">Fashion & Apparel</span>
+                                    <span class="dice-chip" data-type="category" data-val="Home & Living" onclick="toggleDiceChip(this)">Home & Living</span>
+                                    <span class="dice-chip" data-type="category" data-val="Sports & Outdoors" onclick="toggleDiceChip(this)">Sports & Outdoors</span>
+                                </div>
+                            </div>
+                            <div class="dice-chip-group">
+                                <div class="dice-chip-group-title">Select Regions (Subset):</div>
+                                <div class="dice-chip-list" id="diceRegionChips">
+                                    <span class="dice-chip active" data-type="region" data-val="East" onclick="toggleDiceChip(this)">East</span>
+                                    <span class="dice-chip active" data-type="region" data-val="West" onclick="toggleDiceChip(this)">West</span>
+                                    <span class="dice-chip" data-type="region" data-val="North" onclick="toggleDiceChip(this)">North</span>
+                                    <span class="dice-chip" data-type="region" data-val="South" onclick="toggleDiceChip(this)">South</span>
+                                </div>
+                            </div>
+                            <div class="dice-chip-group">
+                                <div class="dice-chip-group-title">Select Years (Subset):</div>
+                                <div class="dice-chip-list" id="diceYearChips">
+                                    <span class="dice-chip active" data-type="year" data-val="2024" onclick="toggleDiceChip(this)">2024</span>
+                                    <span class="dice-chip active" data-type="year" data-val="2025" onclick="toggleDiceChip(this)">2025</span>
+                                    <span class="dice-chip active" data-type="year" data-val="2026" onclick="toggleDiceChip(this)">2026</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cube-action-row mt-3">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="pivotCubeAxes()">Rotate Axes (Pivot)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="resetCubeFilters()">Reset to Default Cube</button>
+                        </div>
                     </div>
                 </div>
             </div>
