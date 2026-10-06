@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -243,19 +243,20 @@
                         <div class="olap-ops-grid">
                             <!-- 1. SLICE -->
                             <div class="form-group">
-                                <label for="cubeSliceDimSelect">Slice Dimension (Fixed Cut) <span class="op-badge-indicator">Slice</span></label>
-                                <select id="cubeSliceDimSelect" onchange="onSliceDimChanged()">
+                                <label for="cubeSliceDimSelect">Slice Filter (Fixed Plane) <span class="op-badge-indicator">Slice</span></label>
+                                <select id="cubeSliceDimSelect" onchange="onSliceSelectChanged()">
                                     <option value="">None (Full Cube)</option>
-                                    <option value="timeYear">Time (Year)</option>
-                                    <option value="region">Geography (Region)</option>
-                                    <option value="productCategory">Product (Category)</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cubeSliceValSelect">Slice Value</label>
-                                <select id="cubeSliceValSelect" onchange="onSliceValChanged()" disabled>
-                                    <option value="">Select dimension first</option>
+                                    <option value="time-2025">Time: Year 2025</option>
+                                    <option value="time-2024">Time: Year 2024</option>
+                                    <option value="time-2026">Time: Year 2026</option>
+                                    <option value="region-East">Region: East</option>
+                                    <option value="region-West">Region: West</option>
+                                    <option value="region-North">Region: North</option>
+                                    <option value="region-South">Region: South</option>
+                                    <option value="category-Electronics">Category: Electronics</option>
+                                    <option value="category-Fashion & Apparel">Category: Fashion &amp; Apparel</option>
+                                    <option value="category-Home & Living">Category: Home &amp; Living</option>
+                                    <option value="category-Sports & Outdoors">Category: Sports &amp; Outdoors</option>
                                 </select>
                             </div>
 
@@ -267,38 +268,7 @@
                                     <option value="preset1">Preset: Electronics & Fashion in East & West</option>
                                     <option value="preset2">Preset: TechCorp & Enterprise Clients in 2025</option>
                                     <option value="preset3">Preset: Home & Living + Sports in North & South</option>
-                                    <option value="custom">Custom Multi-Dimension Sub-Cube...</option>
                                 </select>
-                            </div>
-                        </div>
-
-                        <!-- Interactive Custom Dice Selection Chips -->
-                        <div class="dice-chips-container" id="customDicePanel">
-                            <div class="dice-chip-group">
-                                <div class="dice-chip-group-title">Select Categories (Subset):</div>
-                                <div class="dice-chip-list" id="diceCategoryChips">
-                                    <span class="dice-chip active" data-type="category" data-val="Electronics" onclick="toggleDiceChip(this)">Electronics</span>
-                                    <span class="dice-chip active" data-type="category" data-val="Fashion & Apparel" onclick="toggleDiceChip(this)">Fashion & Apparel</span>
-                                    <span class="dice-chip" data-type="category" data-val="Home & Living" onclick="toggleDiceChip(this)">Home & Living</span>
-                                    <span class="dice-chip" data-type="category" data-val="Sports & Outdoors" onclick="toggleDiceChip(this)">Sports & Outdoors</span>
-                                </div>
-                            </div>
-                            <div class="dice-chip-group">
-                                <div class="dice-chip-group-title">Select Regions (Subset):</div>
-                                <div class="dice-chip-list" id="diceRegionChips">
-                                    <span class="dice-chip active" data-type="region" data-val="East" onclick="toggleDiceChip(this)">East</span>
-                                    <span class="dice-chip active" data-type="region" data-val="West" onclick="toggleDiceChip(this)">West</span>
-                                    <span class="dice-chip" data-type="region" data-val="North" onclick="toggleDiceChip(this)">North</span>
-                                    <span class="dice-chip" data-type="region" data-val="South" onclick="toggleDiceChip(this)">South</span>
-                                </div>
-                            </div>
-                            <div class="dice-chip-group">
-                                <div class="dice-chip-group-title">Select Years (Subset):</div>
-                                <div class="dice-chip-list" id="diceYearChips">
-                                    <span class="dice-chip active" data-type="year" data-val="2024" onclick="toggleDiceChip(this)">2024</span>
-                                    <span class="dice-chip active" data-type="year" data-val="2025" onclick="toggleDiceChip(this)">2025</span>
-                                    <span class="dice-chip active" data-type="year" data-val="2026" onclick="toggleDiceChip(this)">2026</span>
-                                </div>
                             </div>
                         </div>
 
@@ -454,6 +424,6 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast"></div>
 
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>

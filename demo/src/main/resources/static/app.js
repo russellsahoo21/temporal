@@ -567,102 +567,69 @@ async function loadCubeMetadata() {
 }
 
 // ---------------- 1. SLICE OPERATION ----------------
-function onSliceDimChanged() {
-    const dimSelect = document.getElementById('cubeSliceDimSelect');
-    const valSelect = document.getElementById('cubeSliceValSelect');
-    const selectedDim = dimSelect.value;
+function onSliceSelectChanged() {
+    const sliceSelect = document.getElementById('cubeSliceDimSelect');
+    const val = sliceSelect ? sliceSelect.value : '';
 
-    valSelect.innerHTML = '';
-
-    if (!selectedDim) {
-        valSelect.disabled = true;
-        valSelect.innerHTML = '<option value="">Select dimension first</option>';
-        activeRequestedOperation = null;
-        applyCubeQuery();
-        return;
-    }
-
-    valSelect.disabled = false;
-    valSelect.innerHTML = '<option value="">-- Choose Value to Slice --</option>';
-
-    if (selectedDim === 'timeYear' && cubeMetadata?.years) {
-        cubeMetadata.years.forEach(y => {
-            valSelect.innerHTML += `<option value="${y}">Year ${y}</option>`;
-        });
-    } else if (selectedDim === 'region' && cubeMetadata?.regions) {
-        cubeMetadata.regions.forEach(r => {
-            valSelect.innerHTML += `<option value="${escapeHtml(r)}">${escapeHtml(r)} Region</option>`;
-        });
-    } else if (selectedDim === 'productCategory' && cubeMetadata?.categories) {
-        cubeMetadata.categories.forEach(c => {
-            valSelect.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
-        });
-    }
-
-    if (valSelect.options.length > 1) {
-        valSelect.selectedIndex = 1;
-    }
-    onSliceValChanged();
-}
-
-function onSliceValChanged() {
-    const sliceVal = document.getElementById('cubeSliceValSelect')?.value;
-    if (sliceVal) {
+    if (val) {
         activeRequestedOperation = 'SLICE';
         // Reset dice when slicing
         const diceSelect = document.getElementById('cubeDiceSelect');
         if (diceSelect) diceSelect.value = '';
         activeDiceParams = null;
-        document.getElementById('customDicePanel')?.classList.remove('active');
+    } else {
+        activeRequestedOperation = null;
     }
+
     applyCubeQuery();
+}
+
+function getActiveSliceInfo() {
+    const rawVal = document.getElementById('cubeSliceDimSelect')?.value || '';
+    if (!rawVal) return { dim: null, val: null };
+
+    const parts = rawVal.split('-');
+    const prefix = parts[0];
+    const val = parts.slice(1).join('-');
+
+    if (prefix === 'time') {
+        return { dim: 'timeYear', val: val };
+    } else if (prefix === 'region') {
+        return { dim: 'region', val: val };
+    } else if (prefix === 'category') {
+        return { dim: 'productCategory', val: val };
+    }
+    return { dim: null, val: null };
 }
 
 // ---------------- 2. DICE OPERATION ----------------
 function onDicePresetChanged() {
     const diceSelect = document.getElementById('cubeDiceSelect');
-    const customPanel = document.getElementById('customDicePanel');
     const val = diceSelect ? diceSelect.value : '';
 
     // Reset slice to avoid conflicting operations
-    const sliceDim = document.getElementById('cubeSliceDimSelect');
-    const sliceVal = document.getElementById('cubeSliceValSelect');
-    if (sliceDim) sliceDim.value = '';
-    if (sliceVal) {
-        sliceVal.innerHTML = '<option value="">Select dimension first</option>';
-        sliceVal.disabled = true;
-    }
+    const sliceSelect = document.getElementById('cubeSliceDimSelect');
+    if (sliceSelect) sliceSelect.value = '';
 
     if (val === 'preset1') {
-        customPanel?.classList.remove('active');
         activeDiceParams = {
             diceCategories: ['Electronics', 'Fashion & Apparel'],
             diceRegions: ['East', 'West']
         };
-        syncDiceChips(activeDiceParams);
         activeRequestedOperation = 'DICE';
     } else if (val === 'preset2') {
-        customPanel?.classList.remove('active');
         activeDiceParams = {
             diceCategories: ['Electronics', 'Home & Living'],
             diceYears: [2025]
         };
-        syncDiceChips(activeDiceParams);
         activeRequestedOperation = 'DICE';
     } else if (val === 'preset3') {
-        customPanel?.classList.remove('active');
         activeDiceParams = {
             diceCategories: ['Home & Living', 'Sports & Outdoors'],
             diceRegions: ['North', 'South']
         };
-        syncDiceChips(activeDiceParams);
-        activeRequestedOperation = 'DICE';
-    } else if (val === 'custom') {
-        customPanel?.classList.add('active');
-        collectCustomDiceChips();
         activeRequestedOperation = 'DICE';
     } else {
-        customPanel?.classList.remove('active');
         activeDiceParams = null;
         activeRequestedOperation = null;
     }
@@ -670,42 +637,7 @@ function onDicePresetChanged() {
     applyCubeQuery();
 }
 
-function toggleDiceChip(el) {
-    el.classList.toggle('active');
-    const diceSelect = document.getElementById('cubeDiceSelect');
-    if (diceSelect && diceSelect.value !== 'custom') {
-        diceSelect.value = 'custom';
-    }
-    document.getElementById('customDicePanel')?.classList.add('active');
-    collectCustomDiceChips();
-    activeRequestedOperation = 'DICE';
-    applyCubeQuery();
-}
 
-function collectCustomDiceChips() {
-    const cats = Array.from(document.querySelectorAll('#diceCategoryChips .dice-chip.active')).map(c => c.dataset.val);
-    const regs = Array.from(document.querySelectorAll('#diceRegionChips .dice-chip.active')).map(r => r.dataset.val);
-    const yrs = Array.from(document.querySelectorAll('#diceYearChips .dice-chip.active')).map(y => parseInt(y.dataset.val, 10));
-
-    activeDiceParams = {
-        diceCategories: cats.length ? cats : null,
-        diceRegions: regs.length ? regs : null,
-        diceYears: yrs.length ? yrs : null
-    };
-}
-
-function syncDiceChips(params) {
-    if (!params) return;
-    document.querySelectorAll('#diceCategoryChips .dice-chip').forEach(c => {
-        c.classList.toggle('active', !params.diceCategories || params.diceCategories.includes(c.dataset.val));
-    });
-    document.querySelectorAll('#diceRegionChips .dice-chip').forEach(r => {
-        r.classList.toggle('active', !params.diceRegions || params.diceRegions.includes(r.dataset.val));
-    });
-    document.querySelectorAll('#diceYearChips .dice-chip').forEach(y => {
-        y.classList.toggle('active', !params.diceYears || params.diceYears.includes(parseInt(y.dataset.val, 10)));
-    });
-}
 
 function setTimeHierarchy(level) {
     currentCubeHierarchy = level;
@@ -728,18 +660,12 @@ function resetCubeFilters() {
     document.getElementById('cubeMeasureSelect').value = 'REVENUE';
     
     // Reset Slice
-    const sliceDim = document.getElementById('cubeSliceDimSelect');
-    if (sliceDim) sliceDim.value = '';
-    const sliceValSelect = document.getElementById('cubeSliceValSelect');
-    if (sliceValSelect) {
-        sliceValSelect.innerHTML = '<option value="">Select dimension first</option>';
-        sliceValSelect.disabled = true;
-    }
+    const sliceSelect = document.getElementById('cubeSliceDimSelect');
+    if (sliceSelect) sliceSelect.value = '';
 
     // Reset Dice
     const diceSelect = document.getElementById('cubeDiceSelect');
     if (diceSelect) diceSelect.value = '';
-    document.getElementById('customDicePanel')?.classList.remove('active');
     activeDiceParams = null;
 
     setTimeHierarchy('QUARTER');
@@ -753,14 +679,11 @@ function runCubePreset(preset) {
 
     const rowSelect = document.getElementById('cubeRowDimSelect');
     const colSelect = document.getElementById('cubeColDimSelect');
-    const sliceDim = document.getElementById('cubeSliceDimSelect');
-    const sliceVal = document.getElementById('cubeSliceValSelect');
+    const sliceSelect = document.getElementById('cubeSliceDimSelect');
     const diceSelect = document.getElementById('cubeDiceSelect');
-    const customDice = document.getElementById('customDicePanel');
 
-    // Clear panels
-    if (customDice) customDice.classList.remove('active');
     if (diceSelect) diceSelect.value = '';
+    if (sliceSelect) sliceSelect.value = '';
 
     if (preset === 'standard') {
         resetCubeFilters();
@@ -770,9 +693,7 @@ function runCubePreset(preset) {
     if (preset === 'slice') {
         rowSelect.value = 'productCategory';
         colSelect.value = 'region';
-        sliceDim.value = 'timeYear';
-        onSliceDimChanged();
-        sliceVal.value = '2025';
+        if (sliceSelect) sliceSelect.value = 'time-2025';
         activeRequestedOperation = 'SLICE';
         applyCubeQuery();
         return;
@@ -781,14 +702,11 @@ function runCubePreset(preset) {
     if (preset === 'dice') {
         rowSelect.value = 'productCategory';
         colSelect.value = 'region';
-        sliceDim.value = '';
-        sliceVal.disabled = true;
         if (diceSelect) diceSelect.value = 'preset1';
         activeDiceParams = {
             diceCategories: ['Electronics', 'Fashion & Apparel'],
             diceRegions: ['East', 'West']
         };
-        syncDiceChips(activeDiceParams);
         activeRequestedOperation = 'DICE';
         applyCubeQuery();
         return;
@@ -822,16 +740,15 @@ async function applyCubeQuery() {
     const rowDim = document.getElementById('cubeRowDimSelect').value;
     const colDim = document.getElementById('cubeColDimSelect');
     const measure = document.getElementById('cubeMeasureSelect').value;
-    const sliceDim = document.getElementById('cubeSliceDimSelect').value;
-    const sliceVal = document.getElementById('cubeSliceValSelect').value;
+    const sliceInfo = getActiveSliceInfo();
 
     const payload = {
         rowDimension: rowDim,
         colDimension: colDim ? colDim.value : 'timePeriod',
         timeHierarchy: currentCubeHierarchy,
         measure: measure,
-        sliceDimension: sliceDim || null,
-        sliceValue: sliceVal || null,
+        sliceDimension: sliceInfo.dim,
+        sliceValue: sliceInfo.val,
         requestedOperation: activeRequestedOperation
     };
 
@@ -1066,8 +983,9 @@ function render3dCube() {
     const boxSize = 28;
     const spacing = 46;
 
-    const sliceDim = document.getElementById('cubeSliceDimSelect')?.value || '';
-    const sliceVal = document.getElementById('cubeSliceValSelect')?.value || '';
+    const sliceInfo = getActiveSliceInfo();
+    const sliceDim = sliceInfo.dim;
+    const sliceVal = sliceInfo.val;
 
     // Check if Dice is active
     const hasDice = !!(activeDiceParams && (
