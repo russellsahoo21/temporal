@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -154,12 +154,15 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Quick Presets for Teacher Demo -->
+                    <!-- Quick Presets -->
                     <div class="preset-bar mb-3">
-                        <span class="preset-label">Teacher Demonstration Presets:</span>
+                        <span class="preset-label">Demonstration Presets:</span>
                         <button class="btn btn-secondary btn-sm" onclick="runCubePreset('standard')">Standard 3D Cube</button>
                         <button class="btn btn-secondary btn-sm" onclick="runCubePreset('slice')">Slice (Time = 2025)</button>
-                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('dice')">Dice (Electronics & Fashion in East & West)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('dice')">Dice (Electronics &amp; Fashion in East &amp; West)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('pivot')">Pivot (Rotate: Region &times; Category)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('drilldown')">Drill-Down (Quarter &rarr; Month)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('rollup')">Roll-Up (Quarter &rarr; Year)</button>
                     </div>
 
                     <!-- 3D Interactive Visual Data Cube -->
@@ -183,6 +186,7 @@
                             <div class="legend-item"><span class="legend-box" style="background:#38bdf8;"></span> <span id="cubeAxisXLegend"><strong>X-Axis:</strong> Product Category</span></div>
                             <div class="legend-item"><span class="legend-box" style="background:#818cf8;"></span> <span id="cubeAxisYLegend"><strong>Y-Axis (Depth):</strong> Region</span></div>
                             <div class="legend-item"><span class="legend-box" style="background:#34d399;"></span> <span id="cubeAxisZLegend"><strong>Z-Axis (Vertical):</strong> Time Quarter</span></div>
+                            <div class="legend-item"><span class="legend-box" style="background:#475569;"></span> <span><strong>Default Cube:</strong> Data Cells (Grey)</span></div>
                             <div class="legend-item"><span class="legend-box" style="background:#f59e0b;"></span> <span><strong>Active Selection:</strong> Slice / Dice</span></div>
                         </div>
                     </div>
@@ -450,6 +454,6 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast"></div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

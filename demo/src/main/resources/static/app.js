@@ -793,6 +793,29 @@ function runCubePreset(preset) {
         applyCubeQuery();
         return;
     }
+
+    if (preset === 'pivot') {
+        rowSelect.value = 'region';
+        colSelect.value = 'productCategory';
+        sliceDim.value = '';
+        sliceVal.disabled = true;
+        applyCubeQuery();
+        return;
+    }
+
+    if (preset === 'drilldown') {
+        rowSelect.value = 'productCategory';
+        colSelect.value = 'timePeriod';
+        setTimeHierarchy('MONTH');
+        return;
+    }
+
+    if (preset === 'rollup') {
+        rowSelect.value = 'productCategory';
+        colSelect.value = 'timePeriod';
+        setTimeHierarchy('YEAR');
+        return;
+    }
 }
 
 async function applyCubeQuery() {
@@ -1197,17 +1220,17 @@ function drawVoxel(ctx, v, isHovered) {
         alpha = 0.98;
         lineWidth = 2.2;
     } else if (v.isDimmed) {
-        // De-emphasize non-selected cells as translucent ghost blocks
+        // De-emphasize non-selected cells as translucent ghost blocks when slicing/dicing
         baseColor = [15, 23, 42];
         borderColor = 'rgba(71, 85, 105, 0.12)';
         alpha = 0.08;
         lineWidth = 0.8;
-    } else if (v.data) {
-        // Glowing cyan for cells with real database facts in default view
-        baseColor = [56, 189, 248];
-        borderColor = '#38bdf8';
-        alpha = 0.90;
-        lineWidth = 1.2;
+    } else {
+        // Clean default cube: solid uniform dark slate grey
+        baseColor = [30, 41, 59];
+        borderColor = 'rgba(71, 85, 105, 0.45)';
+        alpha = 0.85;
+        lineWidth = 1.0;
     }
 
     if (isHovered) {
