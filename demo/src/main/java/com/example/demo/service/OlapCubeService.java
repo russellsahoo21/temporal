@@ -165,24 +165,12 @@ public class OlapCubeService {
             resp.setOperationExplanation(isDiced 
                     ? "Dice applied across multiple dimensions (" + diceExplanation.toString().trim() + "). A filtered sub-cube was isolated."
                     : "Dice selects a sub-cube by specifying subset criteria across two or more dimensions simultaneously.");
-        } else if ("DRILL_DOWN".equals(reqOp) || timeHier.equals("MONTH") || rowDim.equalsIgnoreCase("productBrand") || rowDim.equalsIgnoreCase("productName") || rowDim.equalsIgnoreCase("storeName") || rowDim.equalsIgnoreCase("city")) {
-            resp.setAppliedOperation("DRILL_DOWN");
-            String drillTarget = timeHier.equals("MONTH") ? "Time (Quarter -> Month)" : (rowDim.equalsIgnoreCase("productBrand") || rowDim.equalsIgnoreCase("productName") ? "Product (Category -> " + rowDim + ")" : "Geography (Region -> " + rowDim + ")");
-            resp.setOperationTitle("Drill-down Operation (" + drillTarget + ")");
-            resp.setOperationExplanation("Drill-down navigated down the dimension hierarchy: decomposed summary data into finer, granular detail (" + drillTarget + ").");
-        } else if ("ROLL_UP".equals(reqOp) || timeHier.equals("YEAR")) {
-            resp.setAppliedOperation("ROLL_UP");
-            resp.setOperationTitle("Roll-up Operation (Time Dimension: Quarter -> Year)");
-            resp.setOperationExplanation("Roll-up climbed up the dimension hierarchy: aggregated detailed time periods into broad annual summaries (coarser granularity).");
-        } else if ("PIVOT".equals(reqOp) || rowDim.equalsIgnoreCase("region") || rowDim.equalsIgnoreCase("storeName") || (!rowDim.equalsIgnoreCase("productCategory") && !colDim.equalsIgnoreCase("timePeriod"))) {
-            resp.setAppliedOperation("PIVOT");
-            resp.setOperationTitle("Pivot Operation (Rotate Axes)");
-            resp.setOperationExplanation("Rotated the cube's orientation: transposed axes so rows represent '" + rowDim + "' and columns represent '" + colDim + "' like a multidimensional cross-tab.");
         } else {
             resp.setAppliedOperation("STANDARD");
             resp.setOperationTitle("Full Multidimensional Cube View");
             resp.setOperationExplanation("Displaying all dimensions (Product x Time x Region) aggregated across the entire dataset.");
         }
+
 
         return resp;
     }

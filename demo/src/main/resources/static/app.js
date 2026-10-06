@@ -707,158 +707,16 @@ function syncDiceChips(params) {
     });
 }
 
-// ---------------- 3. PIVOT OPERATION ----------------
-function onPivotPresetChanged() {
-    const pivotSelect = document.getElementById('cubePivotSelect');
-    const rowSelect = document.getElementById('cubeRowDimSelect');
-    const colSelect = document.getElementById('cubeColDimSelect');
-    const val = pivotSelect ? pivotSelect.value : 'default';
-
-    switch (val) {
-        case 'region-cat':
-            rowSelect.value = 'region';
-            colSelect.value = 'productCategory';
-            break;
-        case 'region-time':
-            rowSelect.value = 'region';
-            colSelect.value = 'timePeriod';
-            break;
-        case 'time-cat':
-            rowSelect.value = 'timePeriod';
-            colSelect.value = 'productCategory';
-            break;
-        case 'time-region':
-            rowSelect.value = 'timePeriod';
-            colSelect.value = 'region';
-            break;
-        case 'brand-region':
-            rowSelect.value = 'productBrand';
-            colSelect.value = 'region';
-            break;
-        case 'store-time':
-            rowSelect.value = 'storeName';
-            colSelect.value = 'timePeriod';
-            break;
-        case 'default':
-        default:
-            rowSelect.value = 'productCategory';
-            colSelect.value = 'timePeriod';
-            break;
-    }
-
-    activeRequestedOperation = 'PIVOT';
-    applyCubeQuery();
-}
-
-function pivotCubeAxes() {
-    const rowSelect = document.getElementById('cubeRowDimSelect');
-    const colSelect = document.getElementById('cubeColDimSelect');
-    const temp = rowSelect.value;
-    rowSelect.value = colSelect.value;
-    colSelect.value = temp;
-
-    const pivotSelect = document.getElementById('cubePivotSelect');
-    if (pivotSelect) {
-        // Try to match preset
-        const currentPair = `${rowSelect.value}-${colSelect.value}`;
-        const match = Array.from(pivotSelect.options).find(opt => {
-            if (opt.value === 'region-cat' && rowSelect.value === 'region' && colSelect.value === 'productCategory') return true;
-            if (opt.value === 'region-time' && rowSelect.value === 'region' && colSelect.value === 'timePeriod') return true;
-            if (opt.value === 'time-cat' && rowSelect.value === 'timePeriod' && colSelect.value === 'productCategory') return true;
-            if (opt.value === 'time-region' && rowSelect.value === 'timePeriod' && colSelect.value === 'region') return true;
-            return false;
-        });
-        if (match) {
-            pivotSelect.value = match.value;
-        }
-    }
-
-    activeRequestedOperation = 'PIVOT';
-    applyCubeQuery();
-}
-
-// ---------------- 4. DRILL-DOWN OPERATION ----------------
-function onDrillDownChanged() {
-    const drillSelect = document.getElementById('cubeDrillDownSelect');
-    const rowSelect = document.getElementById('cubeRowDimSelect');
-    const colSelect = document.getElementById('cubeColDimSelect');
-    const val = drillSelect ? drillSelect.value : '';
-
-    if (!val) {
-        applyCubeQuery();
-        return;
-    }
-
-    // Reset Roll-Up select
-    const rollSelect = document.getElementById('cubeRollUpSelect');
-    if (rollSelect) rollSelect.value = '';
-
-    if (val === 'time-month') {
-        setTimeHierarchy('MONTH');
-    } else if (val === 'prod-brand') {
-        rowSelect.value = 'productBrand';
-        if (colSelect.value === 'productBrand') colSelect.value = 'region';
-    } else if (val === 'prod-name') {
-        rowSelect.value = 'productName';
-        if (colSelect.value === 'productName') colSelect.value = 'region';
-    } else if (val === 'geo-store') {
-        rowSelect.value = 'storeName';
-        if (colSelect.value === 'storeName') colSelect.value = 'timePeriod';
-    } else if (val === 'geo-city') {
-        rowSelect.value = 'city';
-        if (colSelect.value === 'city') colSelect.value = 'timePeriod';
-    }
-
-    activeRequestedOperation = 'DRILL_DOWN';
-    applyCubeQuery();
-}
-
-// ---------------- 5. ROLL-UP OPERATION ----------------
-function onRollUpChanged() {
-    const rollSelect = document.getElementById('cubeRollUpSelect');
-    const rowSelect = document.getElementById('cubeRowDimSelect');
-    const colSelect = document.getElementById('cubeColDimSelect');
-    const val = rollSelect ? rollSelect.value : '';
-
-    if (!val) {
-        applyCubeQuery();
-        return;
-    }
-
-    // Reset Drill-down select
-    const drillSelect = document.getElementById('cubeDrillDownSelect');
-    if (drillSelect) drillSelect.value = '';
-
-    if (val === 'time-year') {
-        setTimeHierarchy('YEAR');
-    } else if (val === 'prod-cat') {
-        rowSelect.value = 'productCategory';
-        if (colSelect.value === 'productCategory') colSelect.value = 'region';
-    } else if (val === 'geo-reg') {
-        rowSelect.value = 'region';
-        if (colSelect.value === 'region') colSelect.value = 'productCategory';
-    }
-
-    activeRequestedOperation = 'ROLL_UP';
-    applyCubeQuery();
-}
-
 function setTimeHierarchy(level) {
     currentCubeHierarchy = level;
     document.querySelectorAll('.time-hier-btn').forEach(btn => btn.classList.remove('active'));
 
     if (level === 'YEAR') {
         document.getElementById('hierYearBtn')?.classList.add('active');
-        const rollSelect = document.getElementById('cubeRollUpSelect');
-        if (rollSelect) rollSelect.value = 'time-year';
-        activeRequestedOperation = 'ROLL_UP';
     } else if (level === 'QUARTER') {
         document.getElementById('hierQuarterBtn')?.classList.add('active');
     } else if (level === 'MONTH') {
         document.getElementById('hierMonthBtn')?.classList.add('active');
-        const drillSelect = document.getElementById('cubeDrillDownSelect');
-        if (drillSelect) drillSelect.value = 'time-month';
-        activeRequestedOperation = 'DRILL_DOWN';
     }
 
     applyCubeQuery();
@@ -884,16 +742,6 @@ function resetCubeFilters() {
     document.getElementById('customDicePanel')?.classList.remove('active');
     activeDiceParams = null;
 
-    // Reset Pivot
-    const pivotSelect = document.getElementById('cubePivotSelect');
-    if (pivotSelect) pivotSelect.value = 'default';
-
-    // Reset Drill-down & Roll-up
-    const drillSelect = document.getElementById('cubeDrillDownSelect');
-    if (drillSelect) drillSelect.value = '';
-    const rollSelect = document.getElementById('cubeRollUpSelect');
-    if (rollSelect) rollSelect.value = '';
-
     setTimeHierarchy('QUARTER');
     activeRequestedOperation = 'STANDARD';
     applyCubeQuery();
@@ -908,17 +756,11 @@ function runCubePreset(preset) {
     const sliceDim = document.getElementById('cubeSliceDimSelect');
     const sliceVal = document.getElementById('cubeSliceValSelect');
     const diceSelect = document.getElementById('cubeDiceSelect');
-    const pivotSelect = document.getElementById('cubePivotSelect');
-    const drillSelect = document.getElementById('cubeDrillDownSelect');
-    const rollSelect = document.getElementById('cubeRollUpSelect');
     const customDice = document.getElementById('customDicePanel');
 
     // Clear panels
     if (customDice) customDice.classList.remove('active');
-    if (drillSelect) drillSelect.value = '';
-    if (rollSelect) rollSelect.value = '';
     if (diceSelect) diceSelect.value = '';
-    if (pivotSelect) pivotSelect.value = 'default';
 
     if (preset === 'standard') {
         resetCubeFilters();
@@ -949,33 +791,6 @@ function runCubePreset(preset) {
         syncDiceChips(activeDiceParams);
         activeRequestedOperation = 'DICE';
         applyCubeQuery();
-        return;
-    }
-
-    if (preset === 'pivot') {
-        rowSelect.value = 'region';
-        colSelect.value = 'productCategory';
-        sliceDim.value = '';
-        sliceVal.disabled = true;
-        if (pivotSelect) pivotSelect.value = 'region-cat';
-        activeRequestedOperation = 'PIVOT';
-        applyCubeQuery();
-        return;
-    }
-
-    if (preset === 'drilldown') {
-        rowSelect.value = 'productCategory';
-        colSelect.value = 'timePeriod';
-        if (drillSelect) drillSelect.value = 'time-month';
-        setTimeHierarchy('MONTH');
-        return;
-    }
-
-    if (preset === 'rollup') {
-        rowSelect.value = 'productCategory';
-        colSelect.value = 'timePeriod';
-        if (rollSelect) rollSelect.value = 'time-year';
-        setTimeHierarchy('YEAR');
         return;
     }
 }

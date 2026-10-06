@@ -160,9 +160,6 @@
                         <button class="btn btn-secondary btn-sm" onclick="runCubePreset('standard')">Standard 3D Cube</button>
                         <button class="btn btn-secondary btn-sm" onclick="runCubePreset('slice')">Slice (Time = 2025)</button>
                         <button class="btn btn-secondary btn-sm" onclick="runCubePreset('dice')">Dice (Electronics & Fashion in East & West)</button>
-                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('pivot')">Pivot (Rotate: Region &times; Category)</button>
-                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('drilldown')">Drill-Down (Quarter &rarr; Month)</button>
-                        <button class="btn btn-secondary btn-sm" onclick="runCubePreset('rollup')">Roll-Up (Quarter &rarr; Year)</button>
                     </div>
 
                     <!-- 3D Interactive Visual Data Cube -->
@@ -223,21 +220,21 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Time Hierarchy (Roll-up / Drill-down)</label>
+                            <label>Time Hierarchy</label>
                             <div class="btn-group">
-                                <button type="button" class="btn btn-outline btn-sm time-hier-btn" id="hierYearBtn" onclick="setTimeHierarchy('YEAR')">Year (Roll-up)</button>
+                                <button type="button" class="btn btn-outline btn-sm time-hier-btn" id="hierYearBtn" onclick="setTimeHierarchy('YEAR')">Year</button>
                                 <button type="button" class="btn btn-outline btn-sm time-hier-btn active" id="hierQuarterBtn" onclick="setTimeHierarchy('QUARTER')">Quarter</button>
-                                <button type="button" class="btn btn-outline btn-sm time-hier-btn" id="hierMonthBtn" onclick="setTimeHierarchy('MONTH')">Month (Drill-down)</button>
+                                <button type="button" class="btn btn-outline btn-sm time-hier-btn" id="hierMonthBtn" onclick="setTimeHierarchy('MONTH')">Month</button>
                             </div>
                         </div>
 
                     </div>
 
-                    <!-- The 5 Classic OLAP Operations Controls -->
+                    <!-- Interactive OLAP Operations Controls -->
                     <div class="olap-operations-panel">
                         <div class="olap-ops-title">
-                            <span>Interactive OLAP Cube Operations</span>
-                            <span class="text-secondary" style="font-size:0.75rem; text-transform:none; font-weight:normal;">(Slice &bull; Dice &bull; Pivot &bull; Drill-Down &bull; Roll-Up)</span>
+                            <span>Interactive OLAP Operations</span>
+                            <span class="text-secondary" style="font-size:0.75rem; text-transform:none; font-weight:normal;">(Slice &bull; Dice)</span>
                         </div>
                         <div class="olap-ops-grid">
                             <!-- 1. SLICE -->
@@ -267,44 +264,6 @@
                                     <option value="preset2">Preset: TechCorp & Enterprise Clients in 2025</option>
                                     <option value="preset3">Preset: Home & Living + Sports in North & South</option>
                                     <option value="custom">Custom Multi-Dimension Sub-Cube...</option>
-                                </select>
-                            </div>
-
-                            <!-- 3. PIVOT -->
-                            <div class="form-group">
-                                <label for="cubePivotSelect">Pivot (Rotate Axes) <span class="op-badge-indicator">Pivot</span></label>
-                                <select id="cubePivotSelect" onchange="onPivotPresetChanged()">
-                                    <option value="default">Default: Category (Row) &times; Time (Col)</option>
-                                    <option value="region-cat">Pivot: Region (Row) &times; Category (Col)</option>
-                                    <option value="region-time">Pivot: Region (Row) &times; Time (Col)</option>
-                                    <option value="time-cat">Pivot: Time (Row) &times; Category (Col)</option>
-                                    <option value="time-region">Pivot: Time (Row) &times; Region (Col)</option>
-                                    <option value="brand-region">Pivot: Brand (Row) &times; Region (Col)</option>
-                                    <option value="store-time">Pivot: Store (Row) &times; Time (Col)</option>
-                                </select>
-                            </div>
-
-                            <!-- 4. DRILL-DOWN -->
-                            <div class="form-group">
-                                <label for="cubeDrillDownSelect">Drill-Down (Finer Detail) <span class="op-badge-indicator">Drill-Down</span></label>
-                                <select id="cubeDrillDownSelect" onchange="onDrillDownChanged()">
-                                    <option value="">Current Level (Select to Drill Down)</option>
-                                    <option value="time-month">Time: Quarter &rarr; Month (Finer Dates)</option>
-                                    <option value="prod-brand">Product: Category &rarr; Product Brand</option>
-                                    <option value="prod-name">Product: Category &rarr; Product Name</option>
-                                    <option value="geo-store">Geography: Region &rarr; Store Name</option>
-                                    <option value="geo-city">Geography: Region &rarr; City</option>
-                                </select>
-                            </div>
-
-                            <!-- 5. ROLL-UP -->
-                            <div class="form-group">
-                                <label for="cubeRollUpSelect">Roll-Up (Coarser Summary) <span class="op-badge-indicator">Roll-Up</span></label>
-                                <select id="cubeRollUpSelect" onchange="onRollUpChanged()">
-                                    <option value="">Current Level (Select to Roll Up)</option>
-                                    <option value="time-year">Time: Month / Quarter &rarr; Year (Annual)</option>
-                                    <option value="prod-cat">Product: Brand / Name &rarr; Product Category</option>
-                                    <option value="geo-reg">Geography: Store / City &rarr; Region Total</option>
                                 </select>
                             </div>
                         </div>
@@ -340,7 +299,6 @@
                         </div>
 
                         <div class="cube-action-row mt-3">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="pivotCubeAxes()">Rotate Axes (Pivot)</button>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="resetCubeFilters()">Reset to Default Cube</button>
                         </div>
                     </div>
