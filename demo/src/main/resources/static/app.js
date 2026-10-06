@@ -935,10 +935,15 @@ const CUBE_CELL_DATA = {};
 
 function updateLiveCubeData(salesList) {
     if (!salesList || !Array.isArray(salesList)) return;
+    // Clear existing data keys
+    Object.keys(CUBE_CELL_DATA).forEach(k => delete CUBE_CELL_DATA[k]);
+
     salesList.forEach(s => {
-        const cat = s.product?.category;
-        const reg = s.store?.region;
-        const q = s.time ? `${s.time.year} Q${s.time.quarter}` : null;
+        const cat = s.productCategory || s.product?.category;
+        const reg = s.region || s.store?.region;
+        const yr = s.year || (s.time ? s.time.year : null);
+        const qtr = s.quarter || (s.time ? s.time.quarter : null);
+        const q = (yr && qtr) ? `${yr} Q${qtr}` : null;
 
         const ix = CUBE_DIM_X.indexOf(cat);
         const iy = CUBE_DIM_Y.indexOf(reg);
@@ -1042,7 +1047,11 @@ function render3dCube() {
     const sliceVal = document.getElementById('cubeSliceValSelect')?.value || '';
 
     // Check if Dice is active
-    const isDice = !!(activeDiceParams && (activeDiceParams.diceCategories || activeDiceParams.diceRegions));
+    const hasDice = !!(activeDiceParams && (
+        (activeDiceParams.diceCategories && activeDiceParams.diceCategories.length) ||
+        (activeDiceParams.diceRegions && activeDiceParams.diceRegions.length) ||
+        (activeDiceParams.diceYears && activeDiceParams.diceYears.length)
+    ));
 
     // Project and collect all voxels
     const voxels = [];
@@ -1062,32 +1071,39 @@ function render3dCube() {
                 const region = CUBE_DIM_Y[iy];
                 const timeQ = CUBE_DIM_Z[iz];
 
-                if (sliceDim === 'timeYear' && sliceVal === '2025') {
-                    if (timeQ.includes('2025')) {
-                        isHighlighted = true;
-                        offsetZ = -14; // Explode slice outward visually!
-                    } else {
-                        isDimmed = true;
+                if (sliceDim && sliceVal) {
+                    if (sliceDim === 'timeYear') {
+                        if (timeQ.includes(String(sliceVal))) {
+                            isHighlighted = true;
+                            offsetZ = -18; // Explode slice outward visually along Z-axis
+                        } else {
+                            isDimmed = true;
+                        }
+                    } else if (sliceDim === 'region') {
+                        if (region.toLowerCase() === sliceVal.toLowerCase()) {
+                            isHighlighted = true;
+                            offsetY = -18; // Explode slice outward visually along Y-axis
+                        } else {
+                            isDimmed = true;
+                        }
+                    } else if (sliceDim === 'productCategory') {
+                        if (prodCat.toLowerCase() === sliceVal.toLowerCase()) {
+                            isHighlighted = true;
+                            offsetX = -18; // Explode slice outward visually along X-axis
+                        } else {
+                            isDimmed = true;
+                        }
                     }
-                } else if (sliceDim === 'region' && sliceVal) {
-                    if (region.toLowerCase() === sliceVal.toLowerCase()) {
-                        isHighlighted = true;
-                        offsetY = -14;
-                    } else {
-                        isDimmed = true;
-                    }
-                } else if (sliceDim === 'productCategory' && sliceVal) {
-                    if (prodCat.toLowerCase() === sliceVal.toLowerCase()) {
-                        isHighlighted = true;
-                        offsetX = -14;
-                    } else {
-                        isDimmed = true;
-                    }
-                } else if (isDice) {
+                } else if (hasDice) {
                     const matchCat = !activeDiceParams.diceCategories || activeDiceParams.diceCategories.includes(prodCat);
                     const matchReg = !activeDiceParams.diceRegions || activeDiceParams.diceRegions.includes(region);
-                    if (matchCat && matchReg) {
+                    const matchYr = !activeDiceParams.diceYears || activeDiceParams.diceYears.some(y => timeQ.includes(String(y)));
+
+                    if (matchCat && matchReg && matchYr) {
                         isHighlighted = true;
+                        offsetX = -6;
+                        offsetY = -6;
+                        offsetZ = -6;
                     } else {
                         isDimmed = true;
                     }
@@ -1172,29 +1188,39 @@ function drawVoxel(ctx, v, isHovered) {
     let baseColor = [30, 41, 59]; // Dark slate default
     let borderColor = 'rgba(71, 85, 105, 0.4)';
     let alpha = 0.85;
+    let lineWidth = 1;
 
     if (v.isHighlighted) {
-        baseColor = [245, 158, 11]; // Golden amber for Slice/Dice selection
-        borderColor = '#fbbf24';
-        alpha = 0.95;
+        // High-contrast Golden Amber glow for active Slice / Dice selection
+        baseColor = [245, 158, 11];
+        borderColor = '#fde047';
+        alpha = 0.98;
+        lineWidth = 2.2;
+    } else if (v.isDimmed) {
+        // De-emphasize non-selected cells as translucent ghost blocks
+        baseColor = [15, 23, 42];
+        borderColor = 'rgba(71, 85, 105, 0.12)';
+        alpha = 0.08;
+        lineWidth = 0.8;
     } else if (v.data) {
-        baseColor = [56, 189, 248]; // Cyan glowing for cells with real sales
+        // Glowing cyan for cells with real database facts in default view
+        baseColor = [56, 189, 248];
         borderColor = '#38bdf8';
         alpha = 0.90;
-    } else if (v.isDimmed) {
-        alpha = 0.15; // Transparent dimmed for non-slice blocks
+        lineWidth = 1.2;
     }
 
     if (isHovered) {
         borderColor = '#ffffff';
         baseColor = [99, 102, 241]; // Indigo highlight on hover
         alpha = 1.0;
+        lineWidth = 2.5;
     }
 
     // Top Face
     ctx.fillStyle = `rgba(${Math.min(255, baseColor[0] + 40)}, ${Math.min(255, baseColor[1] + 40)}, ${Math.min(255, baseColor[2] + 40)}, ${alpha})`;
     ctx.strokeStyle = borderColor;
-    ctx.lineWidth = isHovered ? 2 : 1;
+    ctx.lineWidth = lineWidth;
 
     ctx.beginPath();
     ctx.moveTo(x, y - s * 1.1);
